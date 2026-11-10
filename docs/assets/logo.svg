@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="workbench">
+  <rect width="64" height="64" rx="14" fill="#1a73e8"/>
+  <g transform="translate(12 12) scale(2.5)" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round">
+    <path d="M2 5.25h12M3.75 5.25v7.5M12.25 5.25v7.5M3.75 9.5h8.5"/>
+  </g>
+</svg>
