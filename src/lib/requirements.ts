@@ -38,8 +38,8 @@ async function version(cmd: string, args = ["--version"]): Promise<string | null
   }
 }
 
-/** a >= b for dotted numeric versions like "20.9.0". */
-function atLeast(a: string, b: string): boolean {
+/** a >= b for dotted numeric versions like "22.12.0". */
+export function atLeast(a: string, b: string): boolean {
   const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
   const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
   for (let i = 0; i < 3; i++) {

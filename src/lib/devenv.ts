@@ -246,8 +246,12 @@ async function killGroup(pgid: number) {
   if (groupAlive(pgid)) signalGroup(pgid, "SIGKILL");
 }
 
-/** Workbench's own env, minus its Next.js/npm/Electron settings, so the project's tooling picks its own. */
-function devEnv(): NodeJS.ProcessEnv {
+/**
+ * Workbench's own env, minus its Next.js/npm/Electron settings, so the
+ * project's tooling picks its own. Also drops every WORKBENCH_ variable, so a
+ * project's scripts never see the desktop app's API token.
+ */
+export function devEnv(): NodeJS.ProcessEnv {
   const env: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(process.env)) {
     if (/^(__NEXT|NEXT_|TURBOPACK|npm_|ELECTRON_|WORKBENCH_)/i.test(key)) continue;

@@ -15,6 +15,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "desktop:build": "next build && node scripts/build-desktop.mjs",
     "desktop": "npm run desktop:build && electron .",
     "desktop:dist": "npm run desktop:build && electron-builder --config electron-builder.config.mjs --mac --publish never",
@@ -37,6 +40,7 @@
     "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "5.1.0",
     "electron": "45.2.3",
     "electron-builder": "26.18.0",
     "electron-updater": "6.8.11",
@@ -44,6 +48,7 @@
     "eslint": "^10",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
-    "typescript": "^6"
+    "typescript": "^6",
+    "vitest": "5.1.0"
   }
 }
