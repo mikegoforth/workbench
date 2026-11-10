@@ -1,0 +1,29 @@
+# Weekly update PRs for npm packages and the pinned GitHub Actions.
+# Security updates (Dependabot alerts) also need turning on in
+# Settings → Code security; they arrive as soon as an advisory is published.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # Electron and its tooling move together; review them as one PR.
+      electron:
+        patterns: ["electron", "electron-builder", "electron-updater"]
+      next-react:
+        patterns: ["next", "eslint-config-next", "react", "react-dom", "@types/react", "@types/react-dom"]
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    # Versions the rest of the toolchain doesn't support yet. Raise or remove
+    # these when it does. They hold back version updates only: security
+    # updates still arrive.
+    ignore:
+      # typescript-eslint (used by Next's lint config) supports TypeScript < 6.1.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

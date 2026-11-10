@@ -1,0 +1,36 @@
+# Checks every pull request and push to main. Make "Checks" a required status
+# check in a ruleset on main so nothing merges without it.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+
+      - run: npm run lint
+      # Route types (LayoutProps etc.) are generated, not committed: make them first.
+      - run: npm run typecheck
+      # Also builds the server bundle and fails if it picked up .git, src or .env files.
+      - run: npm run desktop:build
+      - run: npm audit --audit-level=high

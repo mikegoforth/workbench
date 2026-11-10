@@ -1,0 +1,46 @@
+{
+  "name": "workbench",
+  "version": "0.1.0",
+  "description": "A local control panel for every project in your projects folder",
+  "author": "workbench contributors",
+  "license": "MIT",
+  "private": true,
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "desktop:build": "next build && node scripts/build-desktop.mjs",
+    "desktop": "npm run desktop:build && electron .",
+    "desktop:dist": "npm run desktop:build && electron-builder --config electron-builder.config.mjs --mac --publish never",
+    "desktop:release": "npm run desktop:build && electron-builder --config electron-builder.config.mjs --mac --publish always"
+  },
+  "dependencies": {
+    "lucide-react": "1.70.0",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "simple-git": "^4.0.2"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^26",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
+    "electron-updater": "6.8.11",
+    "esbuild": "0.28.2",
+    "eslint": "^10",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "^4",
+    "typescript": "^6"
+  }
+}

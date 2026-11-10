@@ -1,0 +1,97 @@
+# Builds the macOS app and publishes it as a GitHub release when a version tag is pushed:
+#   npm version patch && git push --follow-tags
+#
+# Each release gets SHA256SUMS, and (in a public repo) a signed build-provenance
+# attestation per file, which anyone can check:
+#   gh attestation verify workbench-<version>-arm64.dmg --repo <owner>/<repo>
+#
+# Optional secrets, set on the "release" environment (without them the app is
+# ad-hoc signed and updates link to their download):
+#   CSC_LINK, CSC_KEY_PASSWORD        Developer ID Application certificate (.p12, base64) and its password
+#   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID   notarization
+#   RELEASES_TOKEN                    a token that can create releases in the releases repo, when
+#                                     that isn't this repo (installed apps can't read a private repo)
+# Optional variables: RELEASES_OWNER, RELEASES_REPO (default: this repo)
+#
+# Actions are pinned to full commit SHAs (tag in the comment) so a moved tag
+# can't change what runs with the signing secrets. Dependabot keeps them current.
+name: Release desktop app
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: macos-latest
+    # Holds the signing secrets. Add required reviewers in Settings → Environments
+    # so a release can't be signed without approval.
+    environment: release
+    permissions:
+      contents: write # create the release and upload files
+      id-token: write # sign the provenance attestation
+      attestations: write
+    env:
+      RELEASES_OWNER: ${{ vars.RELEASES_OWNER || github.repository_owner }}
+      RELEASES_REPO: ${{ vars.RELEASES_REPO || github.event.repository.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          # electron-builder downloads its own Electron; skip the dev binary.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+
+      - name: Check the tag matches package.json
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match package.json version $version" >&2
+            exit 1
+          fi
+
+      # The full audit: electron-updater ships in the app but is a devDependency.
+      - name: Refuse to ship known high or critical vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Build and publish
+        run: npm run desktop:release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.GITHUB_TOKEN }}
+          WORKBENCH_RELEASES_OWNER: ${{ env.RELEASES_OWNER }}
+          WORKBENCH_RELEASES_REPO: ${{ env.RELEASES_REPO }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Publish SHA256SUMS
+        working-directory: release
+        run: |
+          shasum -a 256 *.dmg *.zip > SHA256SUMS
+          cat SHA256SUMS
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS --clobber --repo "$RELEASES_OWNER/$RELEASES_REPO"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.GITHUB_TOKEN }}
+
+      # Signed (Sigstore) record that this workflow built these files from this commit.
+      # Attestations need a public repo on GitHub's Free, Pro and Team plans.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            release/*.dmg
+            release/*.zip

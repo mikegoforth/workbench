@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+/* dark: utilities follow the resolved theme on <html data-theme>, not the OS directly. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Cloud-console theme: white surfaces on light grey, grey hairlines, one blue
+ * for actions, links, selection and focus; green / amber / red for status only.
+ */
+:root {
+  color-scheme: light;
+  --bg: #f8f9fa;
+  --sidebar: #ffffff;
+  --surface: #ffffff;
+  --subtle: #f8f9fa;
+  --hover: #f1f3f4;
+  --line: #dadce0;
+  --line-strong: #bdc1c6;
+  --fg: #202124;
+  --fg-2: #3c4043;
+  --fg-3: #5f6368;
+  --brand: #1a73e8;
+  --brand-hover: #1765cc;
+  --on-brand: #ffffff;
+  --brand-soft: #e8f0fe;
+  --brand-line: #aecbfa;
+  --brand-text: #1967d2;
+  --ok: #137333;
+  --ok-dot: #1e8e3e;
+  --ok-soft: #e6f4ea;
+  --ok-line: #a8dab5;
+  --warn: #b06000;
+  --warn-dot: #f9ab00;
+  --warn-soft: #fef7e0;
+  --warn-line: #fde293;
+  --bad: #c5221f;
+  --bad-dot: #d93025;
+  --bad-soft: #fce8e6;
+  --bad-line: #f6aea9;
+  --term: #202124;
+  --term-fg: #e8eaed;
+  --shadow-card: 0 1px 2px 0 rgb(60 64 67 / 0.3), 0 1px 3px 1px rgb(60 64 67 / 0.15);
+  --shadow-bar: 0 1px 2px 0 rgb(60 64 67 / 0.3), 0 2px 6px 2px rgb(60 64 67 / 0.15);
+  --shadow-pop: 0 4px 8px 3px rgb(60 64 67 / 0.15), 0 1px 3px rgb(60 64 67 / 0.3);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1c1e;
+  --sidebar: #202124;
+  --surface: #202124;
+  --subtle: #28292c;
+  --hover: #303134;
+  --line: #3c4043;
+  --line-strong: #5f6368;
+  --fg: #e8eaed;
+  --fg-2: #bdc1c6;
+  --fg-3: #9aa0a6;
+  --brand: #8ab4f8;
+  --brand-hover: #aecbfa;
+  --on-brand: #202124;
+  --brand-soft: rgb(138 180 248 / 0.14);
+  --brand-line: rgb(138 180 248 / 0.4);
+  --brand-text: #8ab4f8;
+  --ok: #81c995;
+  --ok-dot: #81c995;
+  --ok-soft: rgb(129 201 149 / 0.14);
+  --ok-line: rgb(129 201 149 / 0.38);
+  --warn: #fdd663;
+  --warn-dot: #fdd663;
+  --warn-soft: rgb(253 214 99 / 0.13);
+  --warn-line: rgb(253 214 99 / 0.36);
+  --bad: #f28b82;
+  --bad-dot: #f28b82;
+  --bad-soft: rgb(242 139 130 / 0.14);
+  --bad-line: rgb(242 139 130 / 0.4);
+  --term: #121314;
+  --term-fg: #e8eaed;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.5), 0 1px 3px 1px rgb(0 0 0 / 0.3);
+  --shadow-bar: 0 1px 2px 0 rgb(0 0 0 / 0.6), 0 2px 6px 2px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 4px 8px 3px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-line: var(--brand-line);
+  --color-brand-text: var(--brand-text);
+  --color-ok: var(--ok);
+  --color-ok-dot: var(--ok-dot);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-line: var(--ok-line);
+  --color-warn: var(--warn);
+  --color-warn-dot: var(--warn-dot);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-line: var(--warn-line);
+  --color-bad: var(--bad);
+  --color-bad-dot: var(--bad-dot);
+  --color-bad-soft: var(--bad-soft);
+  --color-bad-line: var(--bad-line);
+  --color-term: var(--term);
+  --color-term-fg: var(--term-fg);
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --shadow-bar: var(--shadow-bar);
+  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-roboto-mono), ui-monospace, "SF Mono", monospace;
+}
+
+/* ---- Browser surfaces ---- */
+
+/* In the base layer so utilities (focus:outline-none, ring-*) can override them. */
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 25%, transparent);
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--fg-3);
+    opacity: 1;
+  }
+}
+
+/* ---- Rendered markdown (README) ---- */
+
+@layer components {
+  .markdown {
+    @apply text-[14px] leading-relaxed text-fg;
+    max-width: 80ch;
+  }
+  .markdown > :first-child {
+    @apply mt-0;
+  }
+  .markdown h1 {
+    @apply mt-8 mb-3 border-b border-line pb-2 text-xl font-semibold;
+  }
+  .markdown h2 {
+    @apply mt-7 mb-2.5 border-b border-line pb-1.5 text-lg font-semibold;
+  }
+  .markdown h3,
+  .markdown h4,
+  .markdown h5,
+  .markdown h6 {
+    @apply mt-6 mb-2 font-semibold;
+  }
+  .markdown p,
+  .markdown ul,
+  .markdown ol,
+  .markdown blockquote,
+  .markdown pre,
+  .markdown table {
+    @apply my-3;
+  }
+  .markdown ul {
+    @apply list-disc pl-6;
+  }
+  .markdown ol {
+    @apply list-decimal pl-6;
+  }
+  .markdown li {
+    @apply my-1;
+  }
+  .markdown li > input[type="checkbox"] {
+    @apply mr-1.5 accent-brand;
+  }
+  .markdown a {
+    @apply text-brand-text underline-offset-3 hover:underline;
+  }
+  .markdown code {
+    @apply rounded bg-subtle px-1.5 py-0.5 font-mono text-[0.85em];
+  }
+  .markdown pre {
+    @apply overflow-x-auto rounded-lg border border-line bg-subtle p-4;
+  }
+  .markdown pre code {
+    @apply bg-transparent p-0;
+  }
+  .markdown blockquote {
+    @apply border-l-2 border-line-strong pl-4 text-fg-2;
+  }
+  .markdown table {
+    @apply block overflow-x-auto text-left;
+  }
+  .markdown th,
+  .markdown td {
+    @apply border border-line px-3 py-1.5;
+  }
+  .markdown th {
+    @apply bg-subtle font-semibold;
+  }
+  .markdown img {
+    @apply my-2 inline-block max-w-full;
+  }
+  .markdown hr {
+    @apply my-6 border-line;
+  }
+}
