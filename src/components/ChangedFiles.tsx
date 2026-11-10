@@ -6,6 +6,7 @@ import { groupChanges, isConflict, matchesPath, type ChangeGroup, type ChangeGro
 import { openInEditor } from "@/lib/openInEditor";
 import type { ChangedFile } from "@/lib/types";
 import { Chip, Count, EmptyState, FilterBar, Panel, ShowAll, TextButton } from "./ui";
+import { useAppLabels } from "./usePreferences";
 
 /** Above this many files the full list gets a path filter. */
 const FILTER_FROM = 15;
@@ -57,8 +58,8 @@ function kindOf(file: ChangedFile): Kind {
   }
 }
 
-/** One file: its kind, its path, whether it's staged; opens in VS Code when it can. */
-function FileRow({ file, group, onOpen }: { file: ChangedFile; group?: ChangeGroupId; onOpen: (path: string) => void }) {
+/** One file: its kind, its path, whether it's staged; opens in the chosen editor when it can. */
+function FileRow({ file, group, onOpen, editor }: { file: ChangedFile; group?: ChangeGroupId; onOpen: (path: string) => void; editor: string }) {
   const kind = kindOf(file);
   const staged = file.index !== " " && file.index !== "?";
   const partlyStaged = staged && file.workingDir !== " ";
@@ -91,7 +92,7 @@ function FileRow({ file, group, onOpen }: { file: ChangedFile; group?: ChangeGro
         <button
           type="button"
           onClick={() => onOpen(file.path)}
-          title={`${kind.label}. Open in VS Code`}
+          title={`${kind.label}. Open in ${editor}`}
           className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-hover"
         >
           {content}
@@ -124,6 +125,7 @@ export default function ChangedFiles({
   onViewAll?: () => void;
   className?: string;
 }) {
+  const { editor } = useAppLabels();
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [only, setOnly] = useState<Set<ChangeGroupId>>(new Set());
@@ -135,7 +137,7 @@ export default function ChangedFiles({
   const open = async (file: string) => {
     setError(null);
     try {
-      await openInEditor(projectName, file);
+      await openInEditor(projectName, file, editor);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -166,7 +168,7 @@ export default function ChangedFiles({
         ) : (
           <ul>
             {shown.map((file) => (
-              <FileRow key={fileKey(file)} file={file} onOpen={open} />
+              <FileRow key={fileKey(file)} file={file} onOpen={open} editor={editor} />
             ))}
           </ul>
         )}
@@ -227,7 +229,7 @@ export default function ChangedFiles({
                     </h3>
                     <ul className="p-2">
                       {(isExpanded ? g.files : g.files.slice(0, limit)).map((file) => (
-                        <FileRow key={fileKey(file)} file={file} group={g.id} onOpen={open} />
+                        <FileRow key={fileKey(file)} file={file} group={g.id} onOpen={open} editor={editor} />
                       ))}
                     </ul>
                     {g.files.length > limit && (

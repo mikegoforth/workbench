@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { openInEditor, openInTerminal } from "./openInEditor";
 
-// The browser side of "Open in VS Code / Terminal": it only POSTs to /api/open,
+// The browser side of "Open in <editor> / Terminal": it only POSTs to /api/open,
 // so fetch is stubbed and no app is ever launched.
 
 function stubFetch(response: { ok: boolean; json?: () => Promise<unknown> }) {
@@ -36,14 +36,15 @@ describe("openInEditor", () => {
     await expect(openInEditor("alpha")).rejects.toThrow("VS Code isn't installed");
   });
 
-  it("falls back to a generic message when the error has no message", async () => {
+  it("falls back to a message naming the editor when the error has no message", async () => {
     stubFetch({ ok: false, json: () => Promise.resolve({}) });
-    await expect(openInEditor("alpha")).rejects.toThrow("Couldn't open VS Code");
+    await expect(openInEditor("alpha", undefined, "Cursor")).rejects.toThrow("Couldn't open Cursor");
+    await expect(openInEditor("alpha")).rejects.toThrow("Couldn't open the editor");
   });
 
   it("falls back to a generic message when the error body isn't JSON", async () => {
     stubFetch({ ok: false, json: () => Promise.reject(new SyntaxError("Unexpected token <")) });
-    await expect(openInEditor("alpha")).rejects.toThrow("Couldn't open VS Code");
+    await expect(openInEditor("alpha")).rejects.toThrow("Couldn't open the editor");
   });
 });
 
@@ -57,5 +58,6 @@ describe("openInTerminal", () => {
   it("throws with its own fallback message", async () => {
     stubFetch({ ok: false, json: () => Promise.resolve(null) });
     await expect(openInTerminal("alpha")).rejects.toThrow("Couldn't open Terminal");
+    await expect(openInTerminal("alpha", "iTerm2")).rejects.toThrow("Couldn't open iTerm2");
   });
 });

@@ -44,6 +44,10 @@ export const RELEASES: Release[] = [
         text: "Ports: every TCP port listening on your computer and what's using it (a project's dev server or script, a Docker container, or another app), flagging any open beyond localhost. Open web ports in the browser, and stop what workbench runs right from the list.",
       },
       {
+        kind: "new",
+        text: "Preferences, under Settings: open projects in Cursor, Zed, Windsurf, Sublime Text, IntelliJ IDEA or WebStorm instead of VS Code, and in iTerm2, Warp, Ghostty or another terminal you have, choose your color theme, and have projects rescanned every 30 seconds, minute or 5 minutes.",
+      },
+      {
         kind: "changed",
         text: "A roomier, calmer layout: more space around cards and rows, softer corners, and a lighter top bar and sidebar.",
       },

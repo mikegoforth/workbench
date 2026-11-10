@@ -8,6 +8,7 @@ import { openInEditor } from "@/lib/openInEditor";
 import type { ProjectInfo, SetupCheck } from "@/lib/types";
 import type { DevControls } from "./DevEnvironment";
 import { Button, LinkButton, Panel } from "./ui";
+import { useAppLabels } from "./usePreferences";
 
 function Row({
   severity,
@@ -60,6 +61,7 @@ export default function AttentionPanel({
   onChanges?: () => void;
   className?: string;
 }) {
+  const { editor } = useAppLabels();
   const reasons = state.reasons.filter((r) => r.severity !== "note");
   const checks = dev.status?.checks ?? [];
   const problems = checks.filter((c) => c.level !== "ok");
@@ -89,7 +91,7 @@ export default function AttentionPanel({
       );
     }
     return (
-      <Button size="sm" onClick={() => openInEditor(project.name, action.file).catch((e: Error) => dev.setActionError(e.message))}>
+      <Button size="sm" title={`Open in ${editor}`} onClick={() => openInEditor(project.name, action.file, editor).catch((e: Error) => dev.setActionError(e.message))}>
         {action.label}
       </Button>
     );

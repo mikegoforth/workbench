@@ -1,3 +1,5 @@
+import type { Preferences, StoredPreferences } from "./preferences";
+
 export interface ProjectInfo {
   name: string;
   path: string;
@@ -389,6 +391,33 @@ export interface SettingsData {
   projectsDir?: string;
   /** When first-run setup was finished; unset means it hasn't been. */
   setupCompletedAt?: string;
+  /** Editor, terminal and rescan interval, as ids from preferences.ts; unset ones use the defaults. */
+  preferences?: StoredPreferences;
+}
+
+/** An editor or terminal as Preferences offers it. */
+export interface AppOption {
+  id: string;
+  label: string;
+  installed: boolean;
+  /** A note under the name, e.g. which terminal Automatic opens. */
+  detail?: string;
+}
+
+export interface AppChoices {
+  /** Installed ones, plus the current choice even if it isn't (shown as not found). */
+  offered: AppOption[];
+  /** The rest of what workbench supports on this system, by name: none of them is installed. */
+  missing: string[];
+}
+
+/** GET/PUT /api/preferences. */
+export interface PreferencesInfo {
+  platform: "mac" | "linux" | "windows" | "other";
+  /** In effect: what's saved where it applies here, defaults for the rest. */
+  preferences: Preferences;
+  editors: AppChoices;
+  terminals: AppChoices;
 }
 
 /** Something workbench needs installed on this machine (GET /api/requirements). */

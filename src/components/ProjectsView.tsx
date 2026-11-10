@@ -41,13 +41,14 @@ import {
 } from "./ui";
 import type { Ctx, Item } from "./model";
 import { CHIPS, inList, matchesQuery, type ChipId, type Sort, type SortKey } from "./projectQuery";
+import { useAppLabels } from "./usePreferences";
 
 /** Row actions shared by every table that lists projects. */
-export function projectMenuItems(item: Item, ctx: Ctx, onError: (msg: string) => void): MenuItem[] {
+export function projectMenuItems(item: Item, ctx: Ctx, onError: (msg: string) => void, terminal = "Terminal"): MenuItem[] {
   const { project: p, state } = item;
   const a = ctx.actions;
   const items: MenuItem[] = [
-    { label: "Open in Terminal", icon: SquareTerminal, onSelect: () => openInTerminal(p.name).catch((e: Error) => onError(e.message)) },
+    { label: `Open in ${terminal}`, icon: SquareTerminal, onSelect: () => openInTerminal(p.name, terminal).catch((e: Error) => onError(e.message)) },
   ];
   if (p.repoUrl) items.push({ label: `View on ${repoHostLabel(p.repoUrl)}`, icon: ExternalLink, href: p.repoUrl });
   if ((p.aheadBehind?.behind ?? 0) > 0) {
@@ -101,6 +102,7 @@ export default function ProjectsView({
   const { actions: a, overview } = ctx;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const apps = useAppLabels();
 
   const total = ctx.items.filter((i) => inList(i, hidden)).length;
   const base = ctx.items.filter((i) => inList(i, hidden) && matchesQuery(i, query));
@@ -274,13 +276,13 @@ export default function ProjectsView({
                           <Button
                             size="sm"
                             icon={CodeXml}
-                            onClick={() => openInEditor(p.name).catch((e: Error) => setError(e.message))}
-                            title="Open in VS Code"
+                            onClick={() => openInEditor(p.name, undefined, apps.editor).catch((e: Error) => setError(e.message))}
+                            title={`Open in ${apps.editor}`}
                             className="max-sm:hidden"
                           >
-                            VS Code
+                            {apps.editor}
                           </Button>
-                          <Menu label={`Actions for ${p.name}`} icon={EllipsisVertical} items={projectMenuItems(item, ctx, setError)} />
+                          <Menu label={`Actions for ${p.name}`} icon={EllipsisVertical} items={projectMenuItems(item, ctx, setError, apps.terminal)} />
                         </span>
                         {ctx.errors[p.name] && (
                           <span role="alert" className="mt-1 block text-[12px] font-medium whitespace-normal text-bad">

@@ -33,6 +33,7 @@ import { Badge, Button, CiBadge, Menu, PageBody, Panel, PropertyList, StatusIcon
 import type { DetailTab } from "./model";
 import ReadmePanel from "./ReadmePanel";
 import ScriptsPanel from "./ScriptsPanel";
+import { useAppLabels } from "./usePreferences";
 import { useRemoteSync } from "./useRemoteSync";
 
 async function saveNotes(projectName: string, notes: string, todos: TodoItem[]) {
@@ -100,16 +101,17 @@ export default function ProjectDetail({
   useEffect(() => () => clearTimeout(savedTimer.current), []);
   const [notesFocused, setNotesFocused] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
-  const [opening, setOpening] = useState<"vscode" | "terminal" | null>(null);
+  const [opening, setOpening] = useState<"editor" | "terminal" | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const dev = useDevStatus(project.name, onActivity);
+  const apps = useAppLabels();
   const sync = useRemoteSync(project, onUpdate);
 
-  const openWith = async (app: "vscode" | "terminal") => {
+  const openWith = async (app: "editor" | "terminal") => {
     setOpening(app);
     setOpenError(null);
     try {
-      await (app === "vscode" ? openInEditor(project.name) : openInTerminal(project.name));
+      await (app === "editor" ? openInEditor(project.name, undefined, apps.editor) : openInTerminal(project.name, apps.terminal));
     } catch (e) {
       setOpenError((e as Error).message);
     } finally {
@@ -117,7 +119,7 @@ export default function ProjectDetail({
     }
   };
 
-  useShortcut(["o"], () => openWith("vscode"));
+  useShortcut(["o"], () => openWith("editor"));
   useShortcut(["t"], () => openWith("terminal"));
   useShortcut(["g"], () => window.open(project.repoUrl, "_blank", "noopener,noreferrer"), { enabled: !!project.repoUrl });
   useShortcut(["s"], () => dev.act("start"), { enabled: dev.canStart });
@@ -182,11 +184,11 @@ export default function ProjectDetail({
       <span className="mr-2 ml-2 inline-flex">
         <LifecycleButton dev={dev} />
       </span>
-      <Button variant="ghost" icon={opening === "vscode" ? LoaderCircle : CodeXml} spin={opening === "vscode"} onClick={() => openWith("vscode")} disabled={opening !== null} title="Open in VS Code (O)">
-        Open in VS Code
+      <Button variant="ghost" icon={opening === "editor" ? LoaderCircle : CodeXml} spin={opening === "editor"} onClick={() => openWith("editor")} disabled={opening !== null} title={`Open in ${apps.editor} (O)`}>
+        Open in {apps.editor}
       </Button>
-      <Button variant="ghost" icon={SquareTerminal} onClick={() => openWith("terminal")} disabled={opening !== null} title="Open a terminal window here (T)">
-        Terminal
+      <Button variant="ghost" icon={SquareTerminal} onClick={() => openWith("terminal")} disabled={opening !== null} title={apps.terminal === "Terminal" ? "Open a terminal window here (T)" : `Open ${apps.terminal} here (T)`}>
+        {apps.terminal}
       </Button>
       {sync.enabled && (
         <Button variant="ghost" icon={RefreshCw} spin={sync.fetching} onClick={sync.fetchRemote} disabled={sync.fetching || pullPending} title="git fetch --all --prune">
@@ -457,7 +459,7 @@ export default function ProjectDetail({
 
         {/* Keyboard hints: only where there's a keyboard to use them. */}
         <p className="mt-6 hidden text-[12px] text-fg-3 sm:block">
-          Keys: <span className="font-mono">[</span>/<span className="font-mono">]</span> previous / next tab · <span className="font-mono">O</span> VS Code · <span className="font-mono">T</span> Terminal · <span className="font-mono">S</span> Start
+          Keys: <span className="font-mono">[</span>/<span className="font-mono">]</span> previous / next tab · <span className="font-mono">O</span> {apps.editor} · <span className="font-mono">T</span> {apps.terminal} · <span className="font-mono">S</span> Start
           {project.repoUrl && (
             <>
               {" "}
