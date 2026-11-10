@@ -103,6 +103,8 @@ Every release file comes with a signed record that it was built from this repo b
 gh attestation verify workbench-<version>-arm64.dmg --repo mikegoforth/workbench
 ```
 
+Releases after 0.1.4 also attach that record as `workbench-<version>.intoto.jsonl`. To check against the file instead of GitHub's copy, add `--bundle workbench-<version>.intoto.jsonl`.
+
 Each release also lists every file's SHA-256 in `SHA256SUMS`.
 
 </details>

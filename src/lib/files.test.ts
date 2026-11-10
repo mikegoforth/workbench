@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import fc from "fast-check";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { findReadme, resolveFileIn } from "./files";
 
@@ -68,6 +69,59 @@ describe("resolveFileIn", () => {
 
   it.each([undefined, null, 42, ["package.json"], { path: "package.json" }])("refuses a non-string (%j)", (file) => {
     expect(resolveFileIn(project, file)).toBeNull();
+  });
+
+  // Property-based (fast-check): many generated paths, not just the cases above.
+  // They're built from the pieces an escape would combine: parent and current
+  // folder steps, both separators, drive and UNC prefixes, the symlinks and the
+  // look-alike sibling set up above, and arbitrary Unicode (NUL included).
+  const knownPiece = fc.constantFrom(
+    "..",
+    ".",
+    "",
+    "docs",
+    "guide.md",
+    "package.json",
+    "project",
+    "project-secrets",
+    "key",
+    "outside.txt",
+    "escape.txt",
+    "escape-dir",
+    "inside-link.json",
+    "C:",
+    "\\\\server\\share",
+    "~",
+  );
+  // Mostly known pieces, so enough paths reach a real file to test the success path too.
+  const piece = fc.oneof(
+    { weight: 3, arbitrary: knownPiece },
+    { weight: 1, arbitrary: fc.string({ unit: "binary", maxLength: 6 }) },
+  );
+  const anyPath = fc.oneof(
+    {
+      weight: 4,
+      arbitrary: fc
+        .array(fc.tuple(piece, fc.constantFrom("/", "\\")), { minLength: 1, maxLength: 5 })
+        .map((parts) => parts.map(([p, sep]) => p + sep).join("").replace(/[/\\]$/, "")),
+    },
+    { weight: 1, arbitrary: fc.string({ unit: "binary" }) },
+  );
+
+  it("never resolves outside the folder, for any path", () => {
+    const realProject = fs.realpathSync(project);
+    fc.assert(
+      fc.property(anyPath, (file) => {
+        const result = resolveFileIn(project, file);
+        if (result === null) return;
+        // Checked a different way from resolveFileIn's own prefix test.
+        const rel = path.relative(realProject, result);
+        expect(rel === "" || rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)).toBe(false);
+        expect(fs.realpathSync(result)).toBe(result);
+        expect(fs.statSync(result).isFile()).toBe(true);
+      }),
+      { numRuns: 2000 },
+    );
   });
 });
 

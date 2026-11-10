@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import fc from "fast-check";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // paths.ts reads settings from the data folder, which dataDir() caches per
@@ -184,6 +185,41 @@ describe("resolveProjectDir", () => {
       const { resolveProjectDir } = await load();
       expect(resolveProjectDir(name)).toBeNull();
     });
+  });
+
+  // Property-based (fast-check): many generated names, not just the cases
+  // above. They're built from separators, dot steps, drive letters, stream
+  // colons, Windows device names and the folders set up above, plus arbitrary
+  // Unicode (NUL included).
+  const name = fc.oneof(
+    fc
+      .array(
+        fc.oneof(
+          fc.constantFrom("..", ".", "/", "\\", "C:", ":", " ", "alpha", ".hidden", "notes.txt", "data", "NUL", "com1", "__proto__", "\x00"),
+          fc.string({ unit: "binary", maxLength: 4 }),
+        ),
+        { maxLength: 6 },
+      )
+      .map((parts) => parts.join("")),
+    fc.string({ unit: "binary" }),
+  );
+
+  it.each([
+    ["this system", realPlatform],
+    ["Windows", "win32"],
+  ] as const)("only ever resolves to a folder directly inside the projects folder (%s)", async (_label, p) => {
+    setPlatform(p);
+    const { resolveProjectDir } = await load();
+    fc.assert(
+      fc.property(name, (n) => {
+        const dir = resolveProjectDir(n);
+        if (dir === null) return;
+        expect(path.dirname(dir)).toBe(projects);
+        expect(path.basename(dir).startsWith(".")).toBe(false);
+        expect(fs.statSync(dir).isDirectory()).toBe(true);
+      }),
+      { numRuns: 2000 },
+    );
   });
 });
 
