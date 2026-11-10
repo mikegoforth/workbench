@@ -6,10 +6,10 @@
 #    apps and their update feeds, without publishing anything.
 # 2. "Publish" creates a draft release with every file and the release notes
 #    from src/lib/releaseNotes.ts, adds SHA256SUMS and (in a public repo) a
-#    signed build-provenance attestation per file, then publishes it. A
-#    failure leaves an unpublished draft at most, and the order works with
-#    immutable releases (Settings → General → Releases). Anyone can check a
-#    download:
+#    signed build-provenance attestation covering every file, also attached as
+#    workbench-<version>.intoto.jsonl, then publishes it. A failure leaves an
+#    unpublished draft at most, and the order works with immutable releases
+#    (Settings → General → Releases). Anyone can check a download:
 #      gh attestation verify workbench-<version>-arm64.dmg --repo <owner>/<repo>
 #
 # Approval: only "macOS and Linux" uses the "release" environment, which holds
@@ -190,6 +190,7 @@ jobs:
       # Signed (Sigstore) record that this workflow built these files from this commit.
       # Attestations need a public repo on GitHub's Free, Pro and Team plans.
       - name: Attest build provenance
+        id: attest
         if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
@@ -198,6 +199,20 @@ jobs:
             release/*.zip
             release/*.AppImage
             release/*.exe
+
+      # The same attestation as a file on the release, so a download can be
+      # checked against the file itself (gh attestation verify <file> --bundle
+      # <this> --repo …) and OpenSSF Scorecard's Signed-Releases check finds it:
+      # it looks for a *.intoto.jsonl among a release's files, not in GitHub's
+      # attestation store.
+      - name: Attach the attestation to the release
+        if: ${{ !github.event.repository.private }}
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          file="release/workbench-${GITHUB_REF_NAME#v}.intoto.jsonl"
+          cp "$BUNDLE" "$file"
+          gh release upload "$GITHUB_REF_NAME" "$file" --clobber --repo "$RELEASES_OWNER/$RELEASES_REPO"
 
       # Last, so nothing above can change a published release. With immutable
       # releases on, this locks the release's files and tag.
