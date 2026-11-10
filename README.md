@@ -12,6 +12,7 @@ and pick up where you left off, without opening GitHub, a terminal, or each repo
 [![Latest release](https://img.shields.io/github/v/release/mikegoforth/workbench?label=release)](https://github.com/mikegoforth/workbench/releases/latest)
 [![CI](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikegoforth%2Fworkbench%2Fbadges%2Fcoverage.json)](docs/development.md#commands)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16546/badge)](https://www.bestpractices.dev/projects/16546)
 [![macOS](https://img.shields.io/badge/--24292f?logo=apple&logoColor=white "macOS 13 or later")](#macos)
 [![Windows](https://img.shields.io/badge/--24292f?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTMgM2g4LjV2OC41SDN6TTEyLjUgM0gyMXY4LjVoLTguNXpNMyAxMi41aDguNVYyMUgzek0xMi41IDEyLjVIMjFWMjFoLTguNXoiLz48L3N2Zz4%3D "Windows 10 or 11 (x64)")](#windows)
 [![Linux](https://img.shields.io/badge/--24292f?logo=linux&logoColor=white "Linux (x64, arm64)")](#linux)
