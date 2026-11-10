@@ -18,7 +18,7 @@
 
 | Keys | Action |
 | --- | --- |
-| `⌘K` or `/` | Search |
+| `⌘K` (`Ctrl K` on Linux) or `/` | Search |
 | `J` / `K` or arrows | Move through projects |
 | `Enter` | Open the selected project |
 | `Esc` | Go back |
@@ -43,10 +43,10 @@ If the folder doesn't exist, setup scans your home folder for git repos and sugg
 
 ## Where data is stored
 
-Everything workbench saves is in `~/Library/Application Support/workbench/data/`, shared by `npm run dev` and the desktop app. Set `WORKBENCH_DATA_DIR` to use another folder.
+Everything workbench saves is in its data folder, shared by `npm run dev` and the desktop app: `~/Library/Application Support/workbench/data/` on macOS, `~/.config/workbench/data/` on Linux (or under `$XDG_CONFIG_HOME`). Set `WORKBENCH_DATA_DIR` to use another folder.
 
 - `settings.json`: projects folder, hidden and parked projects, and when setup was finished
 - `notes.json`: notes and todos
 - `dev/`: dev environment and script logs, plus the process ID of each running process
 
-The desktop app's own log is `~/Library/Logs/workbench/main.log`.
+The desktop app's own log is `~/Library/Logs/workbench/main.log` on macOS and `~/.config/workbench/logs/main.log` on Linux.

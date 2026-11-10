@@ -25,9 +25,18 @@ export function DockerNotice({
 }) {
   const stopped = docker.state === "stopped";
   const title = stopped ? "Docker isn't running" : docker.state === "missing" ? "Docker isn't installed" : "Docker isn't responding";
-  const detail = stopped
-    ? "Containers can't start, and their status, health and logs are unknown until it's up."
-    : (docker.message ?? "");
+  // No app to launch (Docker Engine on Linux): say how to start it instead of offering a button.
+  const manual = stopped && !docker.app && docker.startCommand;
+  const detail = manual ? (
+    <>
+      Start it in a terminal: <code className="font-mono text-[12.5px] text-fg">{docker.startCommand}</code>. Until then, containers
+      can&apos;t start, and their status, health and logs are unknown.
+    </>
+  ) : stopped ? (
+    "Containers can't start, and their status, health and logs are unknown until it's up."
+  ) : (
+    (docker.message ?? "")
+  );
   return (
     <div
       role="status"

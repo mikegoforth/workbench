@@ -1,6 +1,8 @@
-// electron-builder config for the macOS desktop app.
+// electron-builder config for the desktop app: macOS (dmg + zip) and Linux
+// (AppImage). Builds for the current OS by default; the release workflow
+// builds both on macOS (`--mac --linux`).
 //
-// Signing: with a "Developer ID Application" certificate (in the keychain, or
+// macOS signing: with a "Developer ID Application" certificate (in the keychain, or
 // CSC_LINK + CSC_KEY_PASSWORD in CI) the app is signed with the hardened
 // runtime, and notarized when APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and
 // APPLE_TEAM_ID are set. Updates then install themselves. Without one it is
@@ -52,8 +54,11 @@ const config = {
   // rather than with extraResources, which drops its node_modules folder.
   // Runs before signing, so the server's files are signed with the app.
   afterPack: async (context) => {
-    const app = `${context.packager.appInfo.productFilename}.app`;
-    const target = path.join(context.appOutDir, app, "Contents", "Resources", "server");
+    const resources =
+      context.electronPlatformName === "darwin"
+        ? path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`, "Contents", "Resources")
+        : path.join(context.appOutDir, "resources");
+    const target = path.join(resources, "server");
     fs.rmSync(target, { recursive: true, force: true });
     fs.cpSync(path.join(import.meta.dirname, ".next", "standalone"), target, { recursive: true, verbatimSymlinks: true });
   },
@@ -86,6 +91,22 @@ const config = {
     hardenedRuntime: signed,
     notarize: signed,
   },
+  // Linux: an AppImage per CPU. It runs without installing and, unlike the
+  // unsigned Mac build, can install its own updates. Built on the macOS release
+  // runner too (electron-builder fetches the Linux tools itself).
+  linux: {
+    target: [{ target: "AppImage", arch: ["x64", "arm64"] }],
+    category: "Development",
+    executableName: "workbench",
+    synopsis: "A control panel for every coding project on your machine",
+  },
+  appImage: {
+    artifactName: "${productName}-${version}-${arch}.${ext}",
+  },
+  // The static AppImage runtime. The default (legacy) one needs libfuse2 and an
+  // unversioned libz.so, which stock Ubuntu 24.04 and other current distros
+  // don't have, so the AppImage wouldn't even start there.
+  toolsets: { appimage: "1.0.3" },
   dmg: {
     // Name both by chip (arm64, x64): by default the Intel one has no suffix,
     // which is easy to mistake for the only download. The zips keep the

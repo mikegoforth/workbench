@@ -3,10 +3,12 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { promisify } from "util";
+import { dockerApps, platform, vsCodePaths } from "./platform";
 import type { Requirement, RequirementsResult } from "./types";
 
-// What has to be installed on this Mac before workbench is useful. Checked on
+// What has to be installed on this machine before workbench is useful. Checked on
 // every call (no caching) so "Check again" sees something installed a moment ago.
+// Where to look and where to get things differ between macOS and Linux.
 
 const run = promisify(execFile);
 
@@ -16,8 +18,6 @@ const run = promisify(execFile);
  * README, REQUIREMENTS.md and `engines` in package.json.
  */
 export const MIN_NODE = "22.12.0";
-
-const DOCKER_APPS = ["/Applications/Docker.app", "/Applications/OrbStack.app"];
 
 /** Exit code 0? (e.g. `gh auth status`) */
 async function succeeds(cmd: string, args: string[]): Promise<boolean> {
@@ -68,24 +68,33 @@ async function checkNode(): Promise<Requirement> {
 
 async function checkDocker(): Promise<Requirement> {
   const raw = await version("docker");
-  const help = [
-    { label: "Get Docker Desktop", url: "https://www.docker.com/products/docker-desktop/" },
-    { label: "or OrbStack", url: "https://orbstack.dev/download" },
-  ];
-  const base = { id: "docker" as const, name: "Docker", need: "Docker Desktop or OrbStack", help };
+  const linux = platform() === "linux";
+  const help = linux
+    ? [
+        { label: "Install Docker Engine", url: "https://docs.docker.com/engine/install/" },
+        { label: "or Docker Desktop for Linux", url: "https://docs.docker.com/desktop/setup/install/linux/" },
+      ]
+    : [
+        { label: "Get Docker Desktop", url: "https://www.docker.com/products/docker-desktop/" },
+        { label: "or OrbStack", url: "https://orbstack.dev/download" },
+      ];
+  const need = linux ? "Docker Engine or Docker Desktop" : "Docker Desktop or OrbStack";
+  const base = { id: "docker" as const, name: "Docker", need, help };
 
   if (raw) {
     const found = raw.match(/version\s+([\d.]+)/i)?.[1] ?? raw;
     return { ...base, ok: true, found, detail: `Version ${found}` };
   }
-  const app = DOCKER_APPS.find((p) => fs.existsSync(p));
+  const app = dockerApps().find((a) => fs.existsSync(a.path));
   if (app) {
     return {
       ...base,
       ok: false,
       found: null,
-      detail: `${path.basename(app, ".app")} is installed, but the docker command isn't available.`,
-      hint: `Open ${path.basename(app, ".app")} once so it can finish installing its command-line tools.`,
+      detail: `${app.label} is installed, but the docker command isn't available.`,
+      hint: linux
+        ? "Install the docker-ce-cli package from Docker's repository, or reinstall Docker Desktop."
+        : `Open ${app.label} once so it can finish installing its command-line tools.`,
     };
   }
   return { ...base, ok: false, found: null, detail: "Not found. It's needed for projects with a compose file." };
@@ -93,11 +102,12 @@ async function checkDocker(): Promise<Requirement> {
 
 async function checkGit(): Promise<Requirement> {
   const raw = await version("git");
+  const linux = platform() === "linux";
   const base = {
     id: "git" as const,
     name: "Git",
     need: "any recent version",
-    help: [{ label: "Download Git", url: "https://git-scm.com/downloads/mac" }],
+    help: [{ label: "Download Git", url: linux ? "https://git-scm.com/downloads/linux" : "https://git-scm.com/downloads/mac" }],
   };
   if (raw) {
     const found = raw.match(/version\s+([\d.]+)/i)?.[1] ?? raw;
@@ -108,7 +118,9 @@ async function checkGit(): Promise<Requirement> {
     ok: false,
     found: null,
     detail: "Not found. workbench reads every project's branch, changes and history with it.",
-    hint: "Or install Apple's command-line tools: xcode-select --install",
+    hint: linux
+      ? "Install it with your distribution's package manager, e.g. sudo apt install git or sudo dnf install git"
+      : "Or install Apple's command-line tools: xcode-select --install",
   };
 }
 
@@ -128,7 +140,7 @@ async function checkGitHubCli(): Promise<Requirement> {
   }
   const found = raw.match(/version\s+([\d.]+)/i)?.[1] ?? raw.split("\n")[0];
   if (!(await succeeds("gh", ["auth", "status"]))) {
-    return { ...base, ok: false, found, detail: `Version ${found} is installed, but not signed in.`, hint: "Run gh auth login in Terminal." };
+    return { ...base, ok: false, found, detail: `Version ${found} is installed, but not signed in.`, hint: "Run gh auth login in a terminal." };
   }
   return { ...base, ok: true, found, detail: `Version ${found}, signed in` };
 }
@@ -146,7 +158,8 @@ async function checkVsCode(): Promise<Requirement> {
     const found = raw.split("\n")[0];
     return { ...base, ok: true, found, detail: `Version ${found}` };
   }
-  if (fs.existsSync("/Applications/Visual Studio Code.app")) {
+  // Installed, but its command isn't on PATH (e.g. never added on macOS).
+  if (vsCodePaths().some((p) => fs.existsSync(p))) {
     return { ...base, ok: true, found: null, detail: "Installed" };
   }
   return { ...base, ok: false, found: null, detail: "Not found. workbench opens projects and files in it." };

@@ -179,7 +179,7 @@ export default function ProjectDetail({
       <Button variant="ghost" icon={opening === "vscode" ? LoaderCircle : CodeXml} spin={opening === "vscode"} onClick={() => openWith("vscode")} disabled={opening !== null} title="Open in VS Code (O)">
         Open in VS Code
       </Button>
-      <Button variant="ghost" icon={SquareTerminal} onClick={() => openWith("terminal")} disabled={opening !== null} title="Open a Terminal window here (T)">
+      <Button variant="ghost" icon={SquareTerminal} onClick={() => openWith("terminal")} disabled={opening !== null} title="Open a terminal window here (T)">
         Terminal
       </Button>
       {dev.canStop ? (

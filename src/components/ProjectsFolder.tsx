@@ -165,7 +165,7 @@ export default function ProjectsFolder({
         title="Find your repositories"
         icon={FolderSearch}
         bodyClassName=""
-        description="Looks through your home folder for git repos and suggests the folders that hold them, most GitHub repos first. Skips Library, Desktop, Downloads, hidden folders and node_modules."
+        description="Looks through your home folder for git repos and suggests the folders that hold them, most GitHub repos first. Skips system and media folders, Desktop, Downloads, hidden folders and node_modules."
         actions={
           <Button icon={busy ? LoaderCircle : ScanSearch} spin={busy} onClick={runScan} disabled={busy}>
             {scan ? "Scan again" : "Scan for GitHub repos"}

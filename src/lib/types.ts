@@ -104,6 +104,11 @@ export interface DockerDaemon {
   message: string | null;
   /** The app workbench can launch to start the daemon, if one is installed. */
   app: "Docker" | "OrbStack" | null;
+  /**
+   * When it's stopped and there's no app to launch (Docker Engine on Linux):
+   * the command that starts it, for the user to run in a terminal.
+   */
+  startCommand?: string;
 }
 
 /** A container that needs a look: unhealthy, crash-looping, or exited with an error. */
@@ -282,7 +287,7 @@ export interface SettingsData {
   setupCompletedAt?: string;
 }
 
-/** Something workbench needs installed on this Mac (GET /api/requirements). */
+/** Something workbench needs installed on this machine (GET /api/requirements). */
 export interface Requirement {
   id: "node" | "docker" | "git" | "gh" | "vscode";
   name: string;

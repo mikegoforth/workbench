@@ -105,7 +105,7 @@ let status: UpdateStatus = { state: "idle", current: app.getVersion() };
 const apiToken = randomBytes(32).toString("hex");
 const TOKEN_HEADER = "x-workbench-token";
 
-// ---- Logging (~/Library/Logs/workbench/main.log) ----
+// ---- Logging (macOS ~/Library/Logs/workbench/main.log, Linux ~/.config/workbench/logs/main.log) ----
 
 const logFile = () => path.join(app.getPath("logs"), "main.log");
 
@@ -269,12 +269,16 @@ function setStatus(next: UpdateStatus) {
 }
 
 /**
- * macOS only installs an update over an app signed with a Developer ID
- * certificate. Ad-hoc signed builds still find updates, but link to the
- * download instead of installing it.
+ * Whether an update can install itself, or the app should link to the download.
+ * - macOS only installs over an app signed with a Developer ID certificate.
+ *   Ad-hoc signed builds still find updates, but link to the download.
+ * - Linux: the AppImage replaces itself (APPIMAGE is its path); any other
+ *   copy (an unpacked folder) links to the download.
  */
 function canInstallUpdates(): Promise<boolean> {
   if (!app.isPackaged) return Promise.resolve(false);
+  if (process.platform === "linux") return Promise.resolve(!!process.env.APPIMAGE);
+  if (process.platform !== "darwin") return Promise.resolve(false);
   const bundle = path.resolve(process.execPath, "..", "..", "..");
   return new Promise((resolve) => {
     execFile("/usr/bin/codesign", ["-dv", "--verbose=2", bundle], (error, _stdout, stderr) => {
@@ -331,7 +335,8 @@ async function setupUpdates() {
   }
   const current = app.getVersion();
   const install = await canInstallUpdates();
-  log(`[update] ${install ? "signed with a Developer ID: updates install themselves" : "not Developer ID signed: updates link to their download"}`);
+  const why = process.platform === "darwin" ? (install ? "signed with a Developer ID" : "not Developer ID signed") : install ? "running as an AppImage" : "not an AppImage";
+  log(`[update] ${why}: updates ${install ? "install themselves" : "link to their download"}`);
 
   autoUpdater.autoDownload = install;
   autoUpdater.autoInstallOnAppQuit = install;
@@ -378,12 +383,22 @@ ipcMain.handle("update:install", () => {
 // ---- Menu ----
 
 function buildMenu() {
+  const checkForUpdatesItem = { label: "Check for Updates…", click: () => checkForUpdates({ fromMenu: true }) };
+  // Linux (and later Windows): a window menu bar instead of the macOS app menu.
+  if (process.platform !== "darwin") {
+    return Menu.buildFromTemplate([
+      { label: "&File", submenu: [checkForUpdatesItem, { type: "separator" }, { role: "quit" }] },
+      { role: "editMenu" },
+      { role: "viewMenu" },
+      { label: "&Help", submenu: [{ role: "about" }] },
+    ]);
+  }
   return Menu.buildFromTemplate([
     {
       label: app.name,
       submenu: [
         { role: "about" },
-        { label: "Check for Updates…", click: () => checkForUpdates({ fromMenu: true }) },
+        checkForUpdatesItem,
         { type: "separator" },
         { role: "services" },
         { type: "separator" },
@@ -428,7 +443,10 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   // Like other Mac apps: closing the window keeps workbench in the Dock; clicking it reopens.
-  app.on("window-all-closed", () => {});
+  // Elsewhere, closing the last window quits (and stops the server).
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit();
+  });
   app.on("activate", () => {
     if (!win) createWindow();
   });

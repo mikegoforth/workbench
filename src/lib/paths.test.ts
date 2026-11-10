@@ -88,6 +88,20 @@ describe("validateProjectsDir", () => {
     expect(result).toHaveProperty("error");
     expect((result as { error: string }).error).toContain(message);
   });
+
+  it.each([
+    ["darwin", "Use a full path, like ~/Projects or /Users/you/code"],
+    ["linux", "Use a full path, like ~/Projects or /home/you/code"],
+  ] as const)("gives a %s example of a full path", async (platform, message) => {
+    const real = process.platform;
+    Object.defineProperty(process, "platform", { value: platform, configurable: true });
+    try {
+      const { validateProjectsDir } = await load();
+      expect(validateProjectsDir("code")).toEqual({ error: message });
+    } finally {
+      Object.defineProperty(process, "platform", { value: real, configurable: true });
+    }
+  });
 });
 
 describe("resolveProjectDir", () => {

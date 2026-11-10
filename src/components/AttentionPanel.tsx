@@ -105,7 +105,7 @@ export default function AttentionPanel({
               title={r.label}
               detail={
                 r.id === "ahead"
-                  ? "Push from the Terminal when it's ready."
+                  ? "Push from a terminal when it's ready."
                   : r.id === "behind"
                     ? "Pull only fast-forwards; it never merges."
                     : r.action?.kind === "logs"

@@ -25,7 +25,15 @@ export const RELEASES: Release[] = [
     changes: [
       {
         kind: "new",
+        text: "workbench runs on Linux. Download the AppImage for your computer, make it executable and open it; it installs its own updates.",
+      },
+      {
+        kind: "new",
         text: "See which version you're running, and what changed in each release, from What's new at the bottom of the sidebar.",
+      },
+      {
+        kind: "security",
+        text: "Projects opened in VS Code no longer inherit workbench's private settings, including the key that protects its connection to its own window.",
       },
     ],
   },

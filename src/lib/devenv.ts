@@ -15,6 +15,7 @@ import {
   projectStacks,
   publicStack,
 } from "./docker";
+import { linuxProcessStart, platform } from "./platform";
 import { ContainerProblem, DevStatus, DockerDaemon, ScriptStatus } from "./types";
 
 /*
@@ -37,6 +38,8 @@ import { ContainerProblem, DevStatus, DockerDaemon, ScriptStatus } from "./types
  * log under the data folder's dev/, so they outlive workbench restarts. The pid and start
  * time are saved next to the log. Stop checks that start time before
  * signalling, so a pid later reused by an unrelated process is never killed.
+ * The start time is `ps -o lstart` on macOS and the boot id plus start ticks
+ * from /proc on Linux (see linuxProcessStart).
  */
 
 const run = promisify(execFile);
@@ -76,7 +79,7 @@ interface Plan {
 
 interface RunState {
   pid: number;
-  /** `ps -o lstart` of the pid when we started it; guards against pid reuse. */
+  /** The pid's start time when we started it (see startTimeOf); guards against pid reuse. */
   lstart: string;
   startedAt: string;
   /** Older state files have no kind; those are dev runs. */
@@ -208,7 +211,9 @@ function findUrl(lines: string[]): string | null {
 
 // ---- Processes -------------------------------------------------------------
 
+/** What identifies the process with this pid, as long as it runs; null if there's none. */
 async function startTimeOf(pid: number): Promise<string | null> {
+  if (platform() === "linux") return linuxProcessStart(pid);
   try {
     const { stdout } = await run("ps", ["-o", "lstart=", "-p", String(pid)]);
     return stdout.trim() || null;
@@ -257,7 +262,17 @@ export function devEnv(): NodeJS.ProcessEnv {
     if (/^(__NEXT|NEXT_|TURBOPACK|npm_|ELECTRON_|WORKBENCH_)/i.test(key)) continue;
     // PORT and HOSTNAME are where workbench itself listens; a project must pick its own.
     if (key === "PORT" || key === "HOSTNAME" || key === "NODE_ENV" || key === "INIT_CWD") continue;
+    // Set by the AppImage runtime on Linux: they describe workbench's own bundle, and
+    // an Electron project started from here would think it was that AppImage.
+    if (key === "APPIMAGE" || key === "APPDIR" || key === "ARGV0" || key === "OWD") continue;
     env[key] = value;
+  }
+  // Drop library folders inside workbench's AppImage; keep the user's own.
+  const appDir = process.env.APPDIR;
+  if (appDir && env.LD_LIBRARY_PATH) {
+    const kept = env.LD_LIBRARY_PATH.split(":").filter((dir) => dir && dir !== appDir && !dir.startsWith(appDir + "/"));
+    if (kept.length) env.LD_LIBRARY_PATH = kept.join(":");
+    else delete env.LD_LIBRARY_PATH;
   }
   // NODE_ENV is deliberately absent (Next's types mark it required).
   return env as NodeJS.ProcessEnv;
@@ -572,7 +587,11 @@ export async function runningProjects(): Promise<{
       if (state?.pid && state.lstart) states.push({ name, state });
     }
   }
-  if (states.length > 0) {
+  if (states.length > 0 && platform() === "linux") {
+    for (const { name, state } of states) {
+      if (linuxProcessStart(state.pid) === state.lstart) names.add(name);
+    }
+  } else if (states.length > 0) {
     // ps exits non-zero when some pids are gone, but still prints the live ones.
     const stdout = await run("ps", ["-o", "pid=,lstart=", "-p", states.map((s) => s.state.pid).join(",")])
       .then((r) => r.stdout)

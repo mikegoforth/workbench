@@ -4,8 +4,9 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { atLeast, checkRequirements, MIN_NODE } from "./requirements";
 
-// Every command is mocked, and every file check goes through a spy, so the
-// results never depend on what's installed on the machine running the tests.
+// Every command is mocked, every file check goes through a spy, and the
+// platform is pinned (macOS unless a test says otherwise), so the results never
+// depend on what's installed on the machine running the tests.
 const { execFile } = vi.hoisted(() => ({ execFile: vi.fn() }));
 vi.mock("child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("child_process")>();
@@ -24,7 +25,13 @@ const NVM = path.join(HOME, ".nvm");
 const DOCKER_APP = "/Applications/Docker.app";
 const ORBSTACK_APP = "/Applications/OrbStack.app";
 const VSCODE_APP = "/Applications/Visual Studio Code.app";
-const WATCHED = new Set([NVM, DOCKER_APP, ORBSTACK_APP, VSCODE_APP]);
+const LINUX_DOCKER_DESKTOP = "/opt/docker-desktop";
+const LINUX_VSCODE = ["/usr/share/code", "/usr/bin/code", "/snap/bin/code"];
+const WATCHED = new Set([NVM, DOCKER_APP, ORBSTACK_APP, VSCODE_APP, LINUX_DOCKER_DESKTOP, ...LINUX_VSCODE]);
+
+const realPlatform = process.platform;
+const setPlatform = (platform: NodeJS.Platform) =>
+  Object.defineProperty(process, "platform", { value: platform, configurable: true });
 
 beforeEach(() => {
   outputs = {
@@ -44,10 +51,12 @@ beforeEach(() => {
   vi.spyOn(os, "homedir").mockReturnValue(HOME);
   const realExists = fs.existsSync;
   vi.spyOn(fs, "existsSync").mockImplementation((p) => (WATCHED.has(String(p)) ? existing.has(String(p)) : realExists(p)));
+  setPlatform("darwin");
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setPlatform(realPlatform);
 });
 
 async function requirement(id: string) {
@@ -199,6 +208,12 @@ describe("docker requirement", () => {
     expect(docker).not.toHaveProperty("hint");
     expect(docker?.help.map((h) => h.label)).toEqual(["Get Docker Desktop", "or OrbStack"]);
   });
+
+  it("doesn't count the Linux app on macOS", async () => {
+    outputs["docker --version"] = null;
+    existing.add(LINUX_DOCKER_DESKTOP);
+    expect((await requirement("docker"))?.detail).toBe("Not found. It's needed for projects with a compose file.");
+  });
 });
 
 describe("git requirement", () => {
@@ -233,7 +248,7 @@ describe("GitHub CLI requirement", () => {
       ok: false,
       found: "2.62.0",
       detail: "Version 2.62.0 is installed, but not signed in.",
-      hint: "Run gh auth login in Terminal.",
+      hint: "Run gh auth login in a terminal.",
     });
   });
 
@@ -263,5 +278,79 @@ describe("VS Code requirement", () => {
   it("explains a missing VS Code", async () => {
     outputs["code --version"] = null;
     expect(await requirement("vscode")).toMatchObject({ ok: false, found: null, detail: "Not found. workbench opens projects and files in it." });
+  });
+});
+
+describe("on Linux", () => {
+  beforeEach(() => {
+    setPlatform("linux");
+  });
+
+  it("is ok when everything is installed, with the same checks", async () => {
+    const result = await checkRequirements();
+    expect(result.ok).toBe(true);
+    expect(result.requirements.map((r) => [r.id, r.ok, r.found])).toEqual([
+      ["node", true, "22.12.0"],
+      ["docker", true, "27.3.1"],
+      ["git", true, "2.47.0"],
+      ["gh", true, "2.62.0"],
+      ["vscode", true, "1.95.3"],
+    ]);
+  });
+
+  it("links to Docker Engine and Docker Desktop for Linux", async () => {
+    expect(await requirement("docker")).toMatchObject({
+      ok: true,
+      need: "Docker Engine or Docker Desktop",
+      help: [
+        { label: "Install Docker Engine", url: "https://docs.docker.com/engine/install/" },
+        { label: "or Docker Desktop for Linux", url: "https://docs.docker.com/desktop/setup/install/linux/" },
+      ],
+    });
+  });
+
+  it("notices Docker Desktop for Linux installed without its command", async () => {
+    outputs["docker --version"] = null;
+    existing.add(LINUX_DOCKER_DESKTOP);
+    expect(await requirement("docker")).toMatchObject({
+      ok: false,
+      found: null,
+      detail: "Docker Desktop is installed, but the docker command isn't available.",
+      hint: expect.stringContaining("docker-ce-cli"),
+    });
+  });
+
+  it("doesn't look for macOS apps", async () => {
+    outputs["docker --version"] = null;
+    outputs["code --version"] = null;
+    existing.add(DOCKER_APP).add(ORBSTACK_APP).add(VSCODE_APP);
+    expect(await requirement("docker")).toMatchObject({ ok: false, detail: "Not found. It's needed for projects with a compose file." });
+    expect(await requirement("vscode")).toMatchObject({ ok: false });
+  });
+
+  it("links to Git for Linux and suggests the package manager", async () => {
+    outputs["git --version"] = null;
+    expect(await requirement("git")).toMatchObject({
+      ok: false,
+      help: [{ label: "Download Git", url: "https://git-scm.com/downloads/linux" }],
+      hint: expect.stringContaining("sudo apt install git"),
+    });
+  });
+
+  it.each(LINUX_VSCODE)("counts VS Code installed at %s without code on PATH", async (where) => {
+    outputs["code --version"] = null;
+    existing.add(where);
+    expect(await requirement("vscode")).toMatchObject({ ok: true, found: null, detail: "Installed" });
+  });
+});
+
+describe("on Windows", () => {
+  it("has no app locations to fall back on", async () => {
+    setPlatform("win32");
+    outputs["docker --version"] = null;
+    outputs["code --version"] = null;
+    existing.add(DOCKER_APP).add(VSCODE_APP).add(LINUX_DOCKER_DESKTOP).add("/usr/bin/code");
+    expect(await requirement("docker")).toMatchObject({ ok: false, detail: "Not found. It's needed for projects with a compose file." });
+    expect(await requirement("vscode")).toMatchObject({ ok: false });
   });
 });

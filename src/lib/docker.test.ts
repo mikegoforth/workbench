@@ -31,8 +31,14 @@ const DAY = 24 * HOUR;
 const realExists = fs.existsSync;
 let apps: string[] = ["Docker"];
 
-// docker.ts decides which app it can launch, and caches snapshots and compose
-// configs, per module instance: each test gets a fresh copy.
+const realPlatform = process.platform;
+const setPlatform = (platform: NodeJS.Platform) =>
+  Object.defineProperty(process, "platform", { value: platform, configurable: true });
+
+// docker.ts caches snapshots and compose configs per module instance: each
+// test gets a fresh copy. Which Docker app is installed (`apps`) is answered by
+// the existsSync spy below, and the platform is pinned to macOS unless a test
+// says otherwise, so nothing depends on the machine running the tests.
 async function load(installed: string[] = ["Docker"]) {
   apps = installed;
   vi.resetModules();
@@ -108,13 +114,16 @@ beforeEach(() => {
   vi.spyOn(fs, "existsSync").mockImplementation((p) => {
     if (p === "/Applications/Docker.app") return apps.includes("Docker");
     if (p === "/Applications/OrbStack.app") return apps.includes("OrbStack");
+    if (p === "/opt/docker-desktop") return apps.includes("Docker Desktop for Linux");
     return realExists(p);
   });
+  setPlatform("darwin");
 });
 
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  setPlatform(realPlatform);
 });
 
 afterAll(() => {
@@ -190,6 +199,89 @@ describe("startDaemon", () => {
     const { startDaemon } = await load([]);
     await expect(startDaemon()).rejects.toThrow("No Docker app found in /Applications");
     expect(exec).not.toHaveBeenCalled();
+  });
+
+  it("notices an app installed after it loaded", async () => {
+    exec.mockImplementation(() => ok(""));
+    const { startDaemon } = await load([]);
+    apps = ["OrbStack"];
+    await startDaemon();
+    expect(exec).toHaveBeenCalledWith("open", ["-a", "OrbStack"], { timeout: 10_000 });
+  });
+
+  it("has nothing to launch on Windows", async () => {
+    setPlatform("win32");
+    const { startDaemon } = await load(["Docker", "OrbStack", "Docker Desktop for Linux"]);
+    await expect(startDaemon()).rejects.toThrow("No Docker app found in /Applications");
+    expect(exec).not.toHaveBeenCalled();
+  });
+});
+
+describe("Docker on Linux", () => {
+  const stopped = Object.assign(new Error("Command failed"), {
+    stderr: "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+  });
+
+  beforeEach(() => {
+    setPlatform("linux");
+    vi.stubEnv("DOCKER_HOST", "");
+  });
+
+  it("starts Docker Desktop for Linux through systemd", async () => {
+    exec.mockImplementation(() => ok(""));
+    const { startDaemon, daemonFromError } = await load(["Docker Desktop for Linux"]);
+    await startDaemon();
+    expect(exec).toHaveBeenCalledWith("systemctl", ["--user", "start", "docker-desktop"], { timeout: 10_000 });
+    expect(daemonFromError(stopped)).toEqual({ state: "stopped", message: "Docker isn't running.", app: "Docker" });
+  });
+
+  it("ignores the macOS apps", async () => {
+    const { daemonFromError } = await load(["Docker", "OrbStack"]);
+    expect(daemonFromError(stopped).app).toBeNull();
+  });
+
+  it("says how to start Docker Engine, which has no app", async () => {
+    const { daemonFromError, startDaemon } = await load([]);
+    expect(daemonFromError(stopped)).toEqual({
+      state: "stopped",
+      message: "Docker isn't running. Start it in a terminal: sudo systemctl start docker",
+      app: null,
+      startCommand: "sudo systemctl start docker",
+    });
+    await expect(startDaemon()).rejects.toThrow(
+      "Docker Desktop isn't installed. Start Docker in a terminal: sudo systemctl start docker"
+    );
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it("says how to start rootless Docker", async () => {
+    vi.stubEnv("DOCKER_HOST", "unix:///run/user/1000/docker.sock");
+    const { daemonFromError } = await load([]);
+    expect(daemonFromError(stopped).startCommand).toBe("systemctl --user start docker");
+  });
+
+  it.each([
+    "permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.47/containers/json\": dial unix /var/run/docker.sock: connect: permission denied",
+    "permission denied while trying to connect to the docker API at unix:///var/run/docker.sock",
+  ])("explains a socket it may not use, rather than calling Docker stopped: %s", async (stderr) => {
+    const { daemonFromError } = await load([]);
+    expect(daemonFromError(Object.assign(new Error("Command failed"), { stderr }))).toEqual({
+      state: "error",
+      message: expect.stringContaining("sudo usermod -aG docker $USER"),
+      app: null,
+    });
+  });
+
+  it("reports a running daemon without an app to launch", async () => {
+    exec.mockImplementation(() => ok(""));
+    const { dockerSnapshot } = await load([]);
+    expect((await dockerSnapshot()).daemon).toEqual({ state: "running", message: null, app: null });
+  });
+
+  it("reports the daemon's app in a snapshot", async () => {
+    exec.mockImplementation(() => ok(""));
+    const { dockerSnapshot } = await load(["Docker Desktop for Linux"]);
+    expect((await dockerSnapshot()).daemon).toEqual({ state: "running", message: null, app: "Docker" });
   });
 });
 

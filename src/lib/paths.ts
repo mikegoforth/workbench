@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { platform } from "./platform";
 import { readSettings } from "./settings";
 
 /** Used when nothing else names a projects folder. */
@@ -61,7 +62,7 @@ export function validateProjectsDir(input: unknown): { dir: string } | { error: 
   }
   const expanded = expandHome(input.trim());
   if (!path.isAbsolute(expanded)) {
-    return { error: "Use a full path, like ~/Projects or /Users/you/code" };
+    return { error: `Use a full path, like ~/Projects or ${platform() === "linux" ? "/home" : "/Users"}/you/code` };
   }
   const dir = path.resolve(expanded);
   if (dir === path.parse(dir).root) {

@@ -4,6 +4,7 @@ import { ChevronDown, FolderGit2, Menu as MenuIcon, RefreshCw, Search } from "lu
 import { timeAgo } from "@/lib/format";
 import { Button, Kbd, Logo } from "./ui";
 import ThemeSwitch from "./ThemeSwitch";
+import { useIsMac } from "./usePlatform";
 
 /**
  * The console's top bar: nav toggle, product name, project picker, the big
@@ -30,6 +31,7 @@ export default function AppBar({
   projectsDir: string;
   onRescan: () => void;
 }) {
+  const isMac = useIsMac();
   return (
     <header className="relative z-30 flex h-14 shrink-0 items-center gap-1.5 bg-surface px-2 shadow-bar sm:gap-3 sm:px-3">
       <Button variant="plain" size="md" icon={MenuIcon} onClick={onToggleNav} aria-label="Navigation menu" title="Navigation menu" />
@@ -62,7 +64,7 @@ export default function AppBar({
           Search <span className="hidden sm:inline">(/) for projects, branches and notes</span>
         </span>
         <span className="ml-auto hidden sm:inline-flex">
-          <Kbd>⌘K</Kbd>
+          <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
         </span>
       </button>
 
