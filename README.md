@@ -61,8 +61,6 @@ When a new version comes out, workbench shows a banner with a link to download i
 
 ### Windows
 
-Available from version 0.1.2.
-
 1. Download `workbench-<version>-x64-setup.exe` from the [latest release](https://github.com/mikegoforth/workbench/releases/latest) and run it. It installs for your account only, with no administrator prompt, and adds workbench to the Start menu.
 2. Setup checks your tools and asks for your projects folder.
 
@@ -72,8 +70,6 @@ Available from version 0.1.2.
 workbench installs its own updates: when one is ready, it offers to restart. It runs on Windows on ARM through Windows' x64 emulation.
 
 ### Linux
-
-Available from version 0.1.2.
 
 1. Download the AppImage for your computer from the [latest release](https://github.com/mikegoforth/workbench/releases/latest):
 
