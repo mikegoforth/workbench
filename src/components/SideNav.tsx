@@ -14,6 +14,7 @@ import {
   ListChecks,
   ListTodo,
   Server,
+  SlidersHorizontal,
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
@@ -87,6 +88,7 @@ export default function SideNav({
     {
       title: "Settings",
       items: [
+        { view: "preferences", icon: SlidersHorizontal },
         { view: "folder", icon: FolderCog },
         { view: "hidden", icon: EyeOff, count: counts.hidden },
         ...(setupIssues > 0 || view === "setup" ? [{ view: "setup" as const, icon: ListChecks, count: setupIssues || undefined, tone: "warn" as const }] : []),

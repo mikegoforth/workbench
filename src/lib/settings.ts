@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { dataDir } from "./dataDir";
+import { sanitizePreferences } from "./preferences";
 import { SettingsData } from "./types";
 
 // Lives next to notes.json in the data folder.
@@ -18,6 +19,8 @@ export function readSettings(): SettingsData {
         if (typeof fingerprint === "string") parked[name] = fingerprint;
       }
     }
+    // Only ids from fixed lists, never paths or commands: see preferences.ts.
+    const preferences = sanitizePreferences(raw?.preferences);
     return {
       hiddenProjects: Array.isArray(raw?.hiddenProjects)
         ? raw.hiddenProjects.filter((n: unknown) => typeof n === "string")
@@ -27,6 +30,7 @@ export function readSettings(): SettingsData {
         ? { projectsDir: raw.projectsDir }
         : {}),
       ...(typeof raw?.setupCompletedAt === "string" ? { setupCompletedAt: raw.setupCompletedAt } : {}),
+      ...(Object.keys(preferences).length > 0 ? { preferences } : {}),
     };
   } catch {
     return { hiddenProjects: [], parked: {} };

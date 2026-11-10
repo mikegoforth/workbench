@@ -65,7 +65,7 @@ export function powershellExe(): string {
 }
 
 /** Program Files, from the environment. */
-function programFiles(): string {
+export function programFiles(): string {
   return process.env.ProgramFiles || "C:\\Program Files";
 }
 
@@ -322,14 +322,32 @@ const LINUX_TERMINALS: [name: string, args: (dir: string) => string[]][] = [
  * installed, else the first of LINUX_TERMINALS on PATH. Null if none is.
  */
 export function linuxTerminal(dir: string): Launch | null {
-  const argsFor = (command: string) => LINUX_TERMINALS.find(([name]) => name === path.basename(command))?.[1](dir) ?? [];
   const preferred = which(process.env.TERMINAL?.trim() ?? "");
-  if (preferred) return { command: preferred, args: argsFor(preferred) };
+  if (preferred) return { command: preferred, args: linuxTerminalArgs(preferred, dir) };
   for (const [name] of LINUX_TERMINALS) {
     const command = which(name);
-    if (command) return { command, args: argsFor(command) };
+    if (command) return { command, args: linuxTerminalArgs(command, dir) };
   }
   return null;
+}
+
+/** The arguments that open a terminal in `dir`, by its file name; none for one workbench doesn't know. */
+function linuxTerminalArgs(command: string, dir: string): string[] {
+  return LINUX_TERMINALS.find(([name]) => name === path.basename(command))?.[1](dir) ?? [];
+}
+
+/** The names of the Linux terminals workbench knows, in the order linuxTerminal tries them. */
+export const linuxTerminalNames = (): string[] => LINUX_TERMINALS.map(([name]) => name);
+
+/**
+ * One Linux terminal, chosen in Preferences, to open in `dir`: found on PATH
+ * by its fixed name (never a name from a request), or null if it isn't
+ * installed or isn't one workbench knows.
+ */
+export function linuxTerminalNamed(name: string, dir: string): Launch | null {
+  if (!LINUX_TERMINALS.some(([known]) => known === name)) return null;
+  const command = which(name);
+  return command ? { command, args: linuxTerminalArgs(command, dir) } : null;
 }
 
 /**
@@ -342,6 +360,15 @@ export function linuxTerminal(dir: string): Launch | null {
 export function windowsTerminal(): Launch {
   const wt = which("wt");
   if (wt) return { command: wt, args: ["-d", "."], detached: true };
+  return windowsCommandPrompt();
+}
+
+/**
+ * A new Command Prompt window, to be started (detached) in the project folder:
+ * the folder is only ever the working folder, never part of this fixed
+ * command line.
+ */
+export function windowsCommandPrompt(): Launch {
   // A detached cmd.exe has no console of its own; `start` opens one for a second cmd.exe.
   const cmd = system32("cmd.exe");
   return { command: cmd, args: ["/d", "/s", "/c", `"start "" "${cmd}""`], detached: true, verbatim: true };

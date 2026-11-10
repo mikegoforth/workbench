@@ -25,9 +25,7 @@ const prefLabel = (pref: ThemePref) => (pref === "system" ? "Follow system" : th
  * Esc puts the previous one back.
  */
 export default function ThemeSwitch() {
-  // Server renders "system"; the stored choice takes over after hydration.
-  const pref = useSyncExternalStore(subscribe, readThemePref, () => "system" as ThemePref);
-  const [open, setOpen] = useState(false);
+  const { pref, open, picker } = useThemeChooser();
 
   // While following the system, follow it live.
   useEffect(() => {
@@ -44,27 +42,68 @@ export default function ThemeSwitch() {
         variant="plain"
         size="md"
         icon={Palette}
-        onClick={() => setOpen(true)}
+        onClick={open}
         aria-haspopup="dialog"
         aria-label={`Color theme: ${prefLabel(pref)}`}
         title={`Color theme: ${prefLabel(pref)}`}
       />
-      {open && (
-        <ThemePicker
-          current={pref}
-          onClose={(chosen) => {
-            setOpen(false);
-            if (chosen) {
-              applyThemePref(chosen);
-              window.dispatchEvent(new Event(CHANGE_EVENT));
-            } else {
-              previewTheme(pref);
-            }
-          }}
-        />
-      )}
+      {picker}
     </>
   );
+}
+
+/**
+ * The current theme, as Preferences shows it: its colors, name and
+ * description, with a button that opens the same picker as the top bar's.
+ */
+export function ThemeSetting() {
+  const { pref, open, picker } = useThemeChooser();
+  // Follow system: the theme it shows right now. Before hydration, Light (what the server renders).
+  const dark = useSyncExternalStore(subscribeToScheme, prefersDark, () => false);
+  const theme = themeInfo(resolveTheme(pref, dark));
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+      <Swatch theme={theme} system={pref === "system"} />
+      <div className="min-w-0 flex-1 basis-48">
+        <p className="text-[14px] text-fg">{prefLabel(pref)}</p>
+        <p className="text-[12.5px] text-fg-3">
+          {pref === "system" ? `Light or Dark, as your system is set (now ${theme.label})` : theme.description}
+        </p>
+      </div>
+      <Button icon={Palette} onClick={open} aria-haspopup="dialog">
+        Change theme
+      </Button>
+      {picker}
+    </div>
+  );
+}
+
+function subscribeToScheme(onChange: () => void) {
+  const media = matchMedia("(prefers-color-scheme: dark)");
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+/** The saved theme and the picker that changes it; every chooser on the page stays in step. */
+function useThemeChooser() {
+  // Server renders "system"; the stored choice takes over after hydration.
+  const pref = useSyncExternalStore(subscribe, readThemePref, () => "system" as ThemePref);
+  const [isOpen, setOpen] = useState(false);
+  const picker = isOpen ? (
+    <ThemePicker
+      current={pref}
+      onClose={(chosen) => {
+        setOpen(false);
+        if (chosen) {
+          applyThemePref(chosen);
+          window.dispatchEvent(new Event(CHANGE_EVENT));
+        } else {
+          previewTheme(pref);
+        }
+      }}
+    />
+  ) : null;
+  return { pref, open: () => setOpen(true), picker };
 }
 
 type Row = { pref: ThemePref; label: string; description: string; group: string; theme: ThemeInfo };

@@ -35,10 +35,10 @@ It reads the actual machine: the real git state of every folder, the processes a
 - Pages: Dashboard, Projects (table with filter chips: uncommitted, behind, unpushed, failing, todos), Running, Ports (every listening TCP port and what holds it), Needs attention, Pull requests (every open PR across GitHub waiting on your review or yours), Activity, Todos, Hidden projects; search with ⌘K or /. Projects can be hidden or parked; Running always shows running projects even if hidden.
 - Per project: notes and todos (stored in gitignored `data/`), setup checks (dependencies, env vars vs `.env.example` by name only, `.nvmrc` vs Node on PATH, compose file validity), dev environment Start/Stop (compose then dev script), dependency install, package.json script runner with live output, changed files (open in VS Code), fetch / fast-forward-only pull, history (commits, branches, stashes), GitHub status (CI, PRs, issues), README preview, open in VS Code / Terminal / GitHub.
 - Docker: compose stacks found in the project folder, its subfolders, and from container labels (so stacks started outside workbench count); per-stack Start/Stop/Restart; container health, crash loops and error exits raised in Needs attention; merged container logs; Docker Desktop status with a Start button.
-- Keyboard: ⌘K (Ctrl K on Windows and Linux) or / to search; ↑/↓ or j/k to move through projects, Enter to open, Esc to go back; O, G, T, S for VS Code, GitHub, Terminal, Start.
+- Keyboard: ⌘K (Ctrl K on Windows and Linux) or / to search; ↑/↓ or j/k to move through projects, Enter to open, Esc to go back; O, G, T, S for the editor, GitHub, the terminal, Start (editor and terminal are chosen in Preferences).
 - Command-running API routes accept only loopback hosts and JSON requests; the dev server itself listens on all interfaces.
 - Must offer color themes (owner's request): Light, Paper, Dark, Dimmed, high-contrast light and dark, the special Matrix, Cyberpunk and Crypto, or follow the system, chosen from a VS Code-style picker with live preview.
-- macOS, Windows and Linux; Open in Terminal uses Terminal.app on macOS, Windows Terminal (or Command Prompt) on Windows, and the first terminal found on Linux. GitHub data requires `gh auth login`.
+- macOS, Windows and Linux; Open in Terminal uses the terminal chosen in Preferences: by default Terminal.app on macOS, Windows Terminal (or Command Prompt) on Windows, and the first terminal found on Linux. GitHub data requires `gh auth login`.
 
 ## Brand Commitments
 

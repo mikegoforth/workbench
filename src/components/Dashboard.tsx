@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, RefreshCw } from "lucide-react";
 import { stripState } from "@/lib/attention";
 import { listCount } from "@/lib/pullRequestRows";
+import { rescanMs } from "@/lib/preferences";
 import { changedCount, openTodoCount, projectStatus } from "@/lib/status";
 import type { ContainerProblem, DockerDaemon, Overview, ProjectInfo, ProjectsDirInfo, RequirementsResult } from "@/lib/types";
 import { useShortcut } from "@/lib/useShortcut";
@@ -17,6 +18,7 @@ import { Button, PageBody, TitleBar } from "./ui";
 import { DETAIL_TABS, VIEW_TITLE, VIEWS, type Actions, type Counts, type Ctx, type DetailTab, type Item, type View } from "./model";
 import ProjectDetail from "./ProjectDetail";
 import ProjectPicker from "./ProjectPicker";
+import Preferences from "./Preferences";
 import ProjectsFolder from "./ProjectsFolder";
 import PullRequestsView, { loadErrorOf, loadPullRequests, type PullRequestsState } from "./PullRequestsView";
 import Setup from "./Setup";
@@ -27,6 +29,7 @@ import PortsView from "./PortsView";
 import ServersView from "./ServersView";
 import SideNav from "./SideNav";
 import TodosView from "./TodosView";
+import { usePreferences } from "./usePreferences";
 
 const RUNNING_POLL_MS = 5000;
 // The server caches a minute; this keeps the nav's review count current without hammering GitHub.
@@ -115,6 +118,8 @@ export default function Dashboard() {
   const [pending, setPending] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [prs, setPrs] = useState<PullRequestsState>({ data: null, error: null, loading: true });
+  // Editor, terminal and rescan interval; loading them here also readies every Open in … label.
+  const preferences = usePreferences();
 
   // First scan and the overview; the URL's route applies once the list is known.
   useEffect(() => {
@@ -408,7 +413,11 @@ export default function Dashboard() {
     }
   };
 
-  const rescan = () => {
+  /**
+   * Scan the projects folder again. Pressing Rescan also refreshes GitHub and
+   * what's running; a scheduled rescan (Preferences) leaves GitHub to its own cache.
+   */
+  const scan = (scheduled: boolean) => {
     setLoading(true);
     getJSON<ProjectInfo[]>("/api/projects")
       .then((data) => {
@@ -418,12 +427,32 @@ export default function Dashboard() {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-    getJSON<Overview>("/api/overview?fresh=1")
+    getJSON<Overview>(scheduled ? "/api/overview" : "/api/overview?fresh=1")
       .then(setOverview)
       .catch(() => {});
-    refreshPullRequests(true);
-    setRunningCheck((n) => n + 1);
+    if (!scheduled) {
+      refreshPullRequests(true);
+      setRunningCheck((n) => n + 1);
+    }
   };
+  const rescan = () => scan(false);
+
+  // Rescan on the interval chosen in Preferences (manual only by default),
+  // while the window is visible and no scan is already running.
+  const scanEvery = preferences ? rescanMs(preferences.preferences.rescan) : null;
+  const scanRef = useRef(scan);
+  const loadingRef = useRef(loading);
+  useEffect(() => {
+    scanRef.current = scan;
+    loadingRef.current = loading;
+  });
+  useEffect(() => {
+    if (!scanEvery) return;
+    const timer = setInterval(() => {
+      if (!document.hidden && !loadingRef.current) scanRef.current(true);
+    }, scanEvery);
+    return () => clearInterval(timer);
+  }, [scanEvery]);
 
   // A new projects folder: everything on screen came from the old one, so scan again.
   const recheckRequirements = () => {
@@ -559,6 +588,15 @@ export default function Dashboard() {
         </div>
         <ProjectsFolder info={dirInfo} onSaved={onFolderSaved} />
       </PageBody>
+    );
+  } else if (route.view === "preferences" && !route.project) {
+    content = (
+      <>
+        <TitleBar title="Preferences" />
+        <PageBody className="max-w-3xl!">
+          <Preferences projectsDir={folderLabel} />
+        </PageBody>
+      </>
     );
   } else if (route.view === "folder" && !route.project) {
     content = (

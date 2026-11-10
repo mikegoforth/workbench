@@ -90,10 +90,15 @@ beforeEach(() => {
   vi.stubEnv("TERMINAL", "");
   uninstallAll();
   existing = new Set();
+  // No preferences saved: VS Code and each system's own terminal.
+  fs.rmSync(path.join(root, "data"), { recursive: true, force: true });
+  // Apps in ~/Applications are looked for in a temp home folder, never the real one.
+  vi.spyOn(os, "homedir").mockReturnValue(path.join(root, "home"));
   const realExists = fs.existsSync;
-  vi.spyOn(fs, "existsSync").mockImplementation((p) =>
-    LINUX_CODE.includes(String(p)) || WINDOWS_CODE.includes(String(p)) ? existing.has(String(p)) : realExists(p)
-  );
+  vi.spyOn(fs, "existsSync").mockImplementation((p) => {
+    const s = String(p);
+    return LINUX_CODE.includes(s) || s.startsWith("Q:\\") || s.startsWith("/Applications/") ? existing.has(s) : realExists(p);
+  });
   setPlatform("darwin");
 });
 
@@ -476,5 +481,240 @@ describe("POST /api/open checks", () => {
   it("404s for a null body", async () => {
     const res = await POST(post(null));
     expect(res.status).toBe(404);
+  });
+});
+
+/** Save preferences the way the Preferences page does: ids in settings.json. */
+function prefer(preferences: Record<string, unknown>) {
+  const dir = path.join(root, "data");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "settings.json"), JSON.stringify({ hiddenProjects: [], parked: {}, preferences }));
+}
+
+describe("POST /api/open in the editor chosen in Preferences", () => {
+  const file = () => path.join(alpha, "src", "index.ts");
+  const opts = () => child.spawn.mock.calls[0][2] as Record<string, unknown> & { env: NodeJS.ProcessEnv };
+
+  it("starts the editor's command from PATH with the folder and file, detached, without a shell", async () => {
+    prefer({ editor: "cursor" });
+    const cursor = install(bin, "cursor");
+    const res = await POST(post({ projectName: "alpha", file: "src/index.ts" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(spawned()).toEqual([[cursor, [alpha, file()]]]);
+    expect(opts()).toMatchObject({ cwd: alpha, detached: true, stdio: "ignore" });
+    expect(opts()).not.toHaveProperty("shell");
+    expect(opts().env).not.toHaveProperty("WORKBENCH_PROJECTS_DIR");
+    expect(child.state.unref).toHaveBeenCalled();
+    expect(child.execFile).not.toHaveBeenCalled();
+  });
+
+  it("opens the app with `open -a` on macOS when its command isn't on PATH", async () => {
+    prefer({ editor: "zed" });
+    existing.add("/Applications/Zed.app");
+    const res = await POST(post({ projectName: "alpha" }));
+    expect(res.status).toBe(200);
+    expect(commands()).toEqual([["open", ["-a", "/Applications/Zed.app", alpha]]]);
+    const env = (child.execFile.mock.calls[0][2] as { env: NodeJS.ProcessEnv }).env;
+    expect(env).not.toHaveProperty("WORKBENCH_DATA_DIR");
+    expect(child.spawn).not.toHaveBeenCalled();
+  });
+
+  it("gives a JetBrains IDE the one path: the file", async () => {
+    prefer({ editor: "idea" });
+    existing.add("/Applications/IntelliJ IDEA.app");
+    await POST(post({ projectName: "alpha", file: "src/index.ts" }));
+    expect(commands()).toEqual([["open", ["-a", "/Applications/IntelliJ IDEA.app", file()]]]);
+  });
+
+  it("says when the chosen editor isn't installed, and opens nothing else", async () => {
+    prefer({ editor: "windsurf" });
+    install(bin, "code");
+    const res = await POST(post({ projectName: "alpha" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "Couldn't open Windsurf: it wasn't found. Is it installed? You can choose another editor in Preferences.",
+    });
+    expect(child.execFile).not.toHaveBeenCalled();
+    expect(child.spawn).not.toHaveBeenCalled();
+  });
+
+  it("reports an editor that fails to start", async () => {
+    prefer({ editor: "sublime" });
+    install(bin, "subl");
+    child.state.spawnError = new Error("spawn EACCES");
+    const res = await POST(post({ projectName: "alpha" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Couldn't open Sublime Text: spawn EACCES" });
+  });
+
+  it("reports `open -a` failing", async () => {
+    prefer({ editor: "webstorm" });
+    existing.add("/Applications/WebStorm.app");
+    child.outcome.mockImplementation(() => new Error("LSOpenURLsWithRole() failed"));
+    const res = await POST(post({ projectName: "alpha" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Couldn't open WebStorm: LSOpenURLsWithRole() failed" });
+  });
+
+  it("still only opens files inside the project", async () => {
+    prefer({ editor: "cursor" });
+    install(bin, "cursor");
+    const res = await POST(post({ projectName: "alpha", file: "../../outside.txt" }));
+    expect(res.status).toBe(404);
+    expect(child.spawn).not.toHaveBeenCalled();
+  });
+
+  it.each([{ editor: "emacs" }, { editor: "/bin/sh" }, { editor: ["cursor"] }])("opens VS Code when the saved editor is %j", async (preferences) => {
+    prefer(preferences);
+    install(bin, "cursor");
+    await POST(post({ projectName: "alpha" }));
+    expect(commands()).toEqual([["code", [alpha]]]);
+    expect(child.spawn).not.toHaveBeenCalled();
+  });
+
+  it("starts the editor from PATH on Linux", async () => {
+    setPlatform("linux");
+    prefer({ editor: "sublime" });
+    const subl = install(otherBin, "subl");
+    await POST(post({ projectName: "alpha", file: "src/index.ts" }));
+    expect(spawned()).toEqual([[subl, [alpha, file()]]]);
+    expect(opts()).toMatchObject({ cwd: alpha, detached: true });
+  });
+
+  describe("on Windows", () => {
+    beforeEach(() => {
+      setPlatform("win32");
+      vi.stubEnv("LOCALAPPDATA", "Q:\\Local");
+      vi.stubEnv("ProgramFiles", "Q:\\Programs");
+      vi.stubEnv("PATHEXT", ".EXE;.CMD");
+      vi.stubEnv("PATH", [bin, otherBin].join(";"));
+    });
+
+    it("starts the editor's own .exe with the folder and file", async () => {
+      prefer({ editor: "cursor" });
+      const exe = "Q:\\Local\\Programs\\cursor\\Cursor.exe";
+      existing.add(exe);
+      install(bin, "cursor.cmd");
+      const res = await POST(post({ projectName: "alpha", file: "src/index.ts" }));
+      expect(res.status).toBe(200);
+      expect(spawned()).toEqual([[exe, [alpha, file()]]]);
+      expect(opts()).toMatchObject({ cwd: alpha, detached: true, stdio: "ignore" });
+      expect(opts()).not.toHaveProperty("shell");
+      expect(opts()).not.toHaveProperty("windowsVerbatimArguments");
+    });
+
+    it("never runs the editor's .cmd command", async () => {
+      prefer({ editor: "cursor" });
+      install(bin, "cursor.cmd");
+      const res = await POST(post({ projectName: "alpha", file: "src/index.ts" }));
+      expect(res.status).toBe(500);
+      expect(child.spawn).not.toHaveBeenCalled();
+      expect(child.execFile).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("POST /api/open in the terminal chosen in Preferences", () => {
+  it.each([
+    ["iterm2", "/Applications/iTerm.app"],
+    ["warp", "/Applications/Warp.app"],
+    ["ghostty", "/Applications/Ghostty.app"],
+  ])("opens %s with `open -a` and the folder on macOS", async (terminal, app) => {
+    prefer({ terminal });
+    existing.add(app);
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(200);
+    expect(commands()).toEqual([["open", ["-a", app, alpha]]]);
+    expect(child.spawn).not.toHaveBeenCalled();
+  });
+
+  it("says when the chosen terminal isn't installed, and doesn't open Terminal instead", async () => {
+    prefer({ terminal: "warp" });
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      error: "Couldn't open Warp: it wasn't found. Is it installed? You can choose another terminal in Preferences.",
+    });
+    expect(child.execFile).not.toHaveBeenCalled();
+  });
+
+  it("reports the chosen terminal failing to open", async () => {
+    prefer({ terminal: "ghostty" });
+    existing.add("/Applications/Ghostty.app");
+    child.outcome.mockImplementation(() => new Error("boom"));
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(await res.json()).toEqual({ error: "Couldn't open Ghostty: boom" });
+  });
+
+  it("opens Terminal when the saved terminal is another system's", async () => {
+    prefer({ terminal: "konsole" });
+    install(bin, "konsole");
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(commands()).toEqual([["open", ["-a", "Terminal", alpha]]]);
+  });
+
+  describe("on Linux", () => {
+    beforeEach(() => setPlatform("linux"));
+
+    it("opens the chosen terminal, not the first one found", async () => {
+      prefer({ terminal: "kitty" });
+      install(bin, "x-terminal-emulator");
+      const kitty = install(otherBin, "kitty");
+      const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+      expect(res.status).toBe(200);
+      expect(spawned()).toEqual([[kitty, ["--directory", alpha]]]);
+      expect(child.spawn.mock.calls[0][2]).toMatchObject({ cwd: alpha, detached: true, stdio: "ignore" });
+    });
+
+    it("says when the chosen terminal is missing, rather than opening another", async () => {
+      prefer({ terminal: "kitty" });
+      install(bin, "xterm");
+      const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+      expect(res.status).toBe(500);
+      expect((await res.json()).error).toBe("Couldn't open kitty: it wasn't found. Is it installed? You can choose another terminal in Preferences.");
+      expect(child.spawn).not.toHaveBeenCalled();
+    });
+
+    it("reports the chosen terminal failing to start", async () => {
+      prefer({ terminal: "konsole" });
+      install(bin, "konsole");
+      child.state.spawnError = new Error("spawn EACCES");
+      const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+      expect(await res.json()).toEqual({ error: "Couldn't open Konsole: spawn EACCES" });
+    });
+
+    it("goes back to Automatic when the saved terminal is another system's", async () => {
+      prefer({ terminal: "iterm2" });
+      const xterm = install(bin, "xterm");
+      await POST(post({ projectName: "alpha", app: "terminal" }));
+      expect(spawned()).toEqual([[xterm, []]]);
+    });
+  });
+
+  describe("on Windows", () => {
+    const cmd = "Q:\\Windows\\System32\\cmd.exe";
+    beforeEach(() => {
+      setPlatform("win32");
+      vi.stubEnv("SystemRoot", "Q:\\Windows");
+      vi.stubEnv("PATHEXT", ".EXE;.CMD");
+      vi.stubEnv("PATH", [bin, otherBin].join(";"));
+    });
+
+    it("opens a Command Prompt when that's the choice, even with Windows Terminal installed", async () => {
+      prefer({ terminal: "cmd" });
+      install(bin, "wt.exe");
+      const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+      expect(res.status).toBe(200);
+      expect(spawned()).toEqual([[cmd, ["/d", "/s", "/c", `"start "" "${cmd}""`]]]);
+      expect(child.spawn.mock.calls[0][2]).toMatchObject({ cwd: alpha, detached: true, windowsVerbatimArguments: true });
+    });
+
+    it("opens Windows Terminal when that's the choice", async () => {
+      prefer({ terminal: "wt" });
+      const wt = install(bin, "wt.exe");
+      await POST(post({ projectName: "alpha", app: "terminal" }));
+      expect(spawned()).toEqual([[wt, ["-d", "."]]]);
+    });
   });
 });

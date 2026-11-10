@@ -5,17 +5,22 @@ import { rejectNonLocal } from "@/lib/guard";
 import { resolveProjectDir } from "@/lib/paths";
 import { resolveFileIn } from "@/lib/files";
 import { devEnv } from "@/lib/devenv";
-import { linuxTerminal, platform, vsCodeFallback, windowsTerminal, type Launch } from "@/lib/platform";
+import { editorLaunch, terminalLaunch } from "@/lib/apps";
+import { platform, vsCodeFallback, type Launch } from "@/lib/platform";
+import { editorLabel, resolvePreferences, terminalLabel, type EditorId, type TerminalId } from "@/lib/preferences";
+import { readSettings } from "@/lib/settings";
 
 const run = promisify(execFile);
 
-// POST /api/open { projectName, file?, app? } — opens the project in VS Code
-// (optionally one of its files, in that project's window), or with
-// app: "terminal" opens a terminal window there (Terminal on macOS, the first
-// terminal found on Linux, Windows Terminal or else a Command Prompt on
-// Windows). Names are resolved inside the projects folder and passed via
-// execFile/spawn (no shell; on Windows never through cmd.exe), so callers
-// can't open arbitrary paths or inject commands.
+// POST /api/open { projectName, file?, app? } — opens the project in the
+// editor chosen in Preferences (VS Code unless another was chosen), optionally
+// one of its files in that project's window; or with app: "terminal" opens the
+// chosen terminal there (by default Terminal on macOS, the first terminal
+// found on Linux, Windows Terminal or else a Command Prompt on Windows).
+// Which app is never part of the request: it's an id saved in settings.json,
+// mapped to a fixed command in lib/apps.ts. Names are resolved inside the
+// projects folder and passed via execFile/spawn (no shell; on Windows never
+// through cmd.exe), so callers can't open arbitrary paths or inject commands.
 export async function POST(request: NextRequest) {
   const rejected = rejectNonLocal(request, { write: true });
   if (rejected) return rejected;
@@ -32,8 +37,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
+  const prefs = resolvePreferences(readSettings().preferences, platform());
+
   if (body.app === "terminal") {
-    return openTerminal(projectDir);
+    return openTerminal(projectDir, prefs.terminal);
   }
 
   let file: string | null = null;
@@ -41,6 +48,8 @@ export async function POST(request: NextRequest) {
     file = resolveFileIn(projectDir, body.file);
     if (!file) return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
+
+  if (prefs.editor !== "vscode") return openEditor(prefs.editor, projectDir, file);
 
   if (platform() === "windows") {
     // `code` is code.cmd there, which can't be run without cmd.exe reading the paths: start Code.exe.
@@ -77,31 +86,52 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function openTerminal(projectDir: string): Promise<NextResponse> {
-  const os = platform();
-  if (os === "mac") {
-    try {
-      await run("open", ["-a", "Terminal", projectDir], { timeout: 10_000 });
-      return NextResponse.json({ success: true });
-    } catch (error) {
-      return NextResponse.json({ error: "Couldn't open Terminal: " + (error as Error).message }, { status: 500 });
-    }
-  }
-  if (os !== "linux" && os !== "windows") {
-    return NextResponse.json({ error: "Open in Terminal only works on macOS, Linux and Windows" }, { status: 501 });
-  }
-  const terminal = os === "windows" ? windowsTerminal() : linuxTerminal(projectDir);
-  if (!terminal) {
+/** Any editor but VS Code: its command, app or .exe from lib/apps.ts. */
+async function openEditor(id: Exclude<EditorId, "vscode">, projectDir: string, file: string | null): Promise<NextResponse> {
+  const label = editorLabel(id);
+  const launch = editorLaunch(id, projectDir, file);
+  if (!launch) {
     return NextResponse.json(
-      { error: "No terminal app found. Install one (such as GNOME Terminal, Konsole or xterm), or set $TERMINAL to yours." },
-      { status: 501 }
+      { error: `Couldn't open ${label}: it wasn't found. Is it installed? You can choose another editor in Preferences.` },
+      { status: 500 }
     );
   }
   try {
-    await launchDetached(terminal, projectDir);
+    if (launch.detached) await launchDetached(launch, projectDir);
+    else await run(launch.command, launch.args, { timeout: 10_000, env: devEnv() });
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Couldn't open a terminal: " + (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: `Couldn't open ${label}: ` + (error as Error).message }, { status: 500 });
+  }
+}
+
+async function openTerminal(projectDir: string, id: TerminalId): Promise<NextResponse> {
+  const os = platform();
+  if (os !== "mac" && os !== "linux" && os !== "windows") {
+    return NextResponse.json({ error: "Open in Terminal only works on macOS, Linux and Windows" }, { status: 501 });
+  }
+  // The system's own default keeps its old wording; a chosen app is named.
+  const chosen = id !== "terminal" && id !== "auto" && id !== "wt" && id !== "cmd";
+  const name = chosen ? terminalLabel(id) : os === "mac" ? "Terminal" : "a terminal";
+  const terminal = terminalLaunch(id, projectDir);
+  if (!terminal) {
+    return chosen
+      ? NextResponse.json(
+          { error: `Couldn't open ${name}: it wasn't found. Is it installed? You can choose another terminal in Preferences.` },
+          { status: 500 }
+        )
+      : NextResponse.json(
+          { error: "No terminal app found. Install one (such as GNOME Terminal, Konsole or xterm), or set $TERMINAL to yours." },
+          { status: 501 }
+        );
+  }
+  try {
+    // macOS: `open -a`, which returns once the app has the folder. Elsewhere the terminal itself, let go.
+    if (os === "mac") await run(terminal.command, terminal.args, { timeout: 10_000 });
+    else await launchDetached(terminal, projectDir);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: `Couldn't open ${name}: ` + (error as Error).message }, { status: 500 });
   }
 }
 
