@@ -17,15 +17,22 @@ export default defineConfig({
       // What coverage is measured against: every server-side module, tested or
       // not, so an untested file counts as 0% instead of disappearing.
       include: ["src/lib/**/*.ts", "src/app/api/**/*.ts", "src/proxy.ts"],
-      exclude: ["src/**/*.test.ts", "src/lib/types.ts"],
+      exclude: [
+        "src/**/*.test.ts",
+        // Types only: nothing runs.
+        "src/lib/types.ts",
+        // Browser code (run in the page, not the server): the theme switch and keyboard shortcuts.
+        "src/lib/theme.ts",
+        "src/lib/useShortcut.ts",
+      ],
       reporter: ["text-summary", "text", "html", "json-summary"],
       reportsDirectory: "coverage",
       // A floor, not a goal: CI fails if coverage drops below it. Raise it as tests are added.
       thresholds: {
-        statements: 18,
-        branches: 18,
-        functions: 13,
-        lines: 18,
+        statements: 85,
+        branches: 85,
+        functions: 85,
+        lines: 85,
       },
     },
   },
