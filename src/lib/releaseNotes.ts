@@ -29,7 +29,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: "new",
-        text: "Three special themes with character: Matrix (phosphor green in terminal type), Cyberpunk (neon cyan and hot pink, with hard edges) and Crypto (gold on midnight, with ticker green and red).",
+        text: "Three special themes with character: Matrix (phosphor green in terminal type, with digital rain behind the page), Cyberpunk (neon cyan and hot pink, with hard edges) and Crypto (gold on midnight, with ticker green and red).",
       },
       {
         kind: "changed",

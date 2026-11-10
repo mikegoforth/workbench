@@ -414,13 +414,23 @@
   /* Matrix: terminal type everywhere, a faint phosphor glow, fine scanlines on the page. */
   :root[data-theme="matrix"] body {
     font-family: var(--font-roboto-mono), ui-monospace, "SF Mono", monospace;
-    background-image: repeating-linear-gradient(0deg, rgb(0 255 65 / 0.03) 0 1px, transparent 1px 3px);
   }
   :root[data-theme="matrix"] :is(h1, h2, [aria-current="page"]) {
     text-shadow: 0 0 10px rgb(0 255 65 / 0.45);
   }
   :root[data-theme="matrix"] ::selection {
     background: rgb(0 255 65 / 0.3);
+  }
+  /* Phosphor: links and the focus ring glow; the text cursor is a green block. */
+  :root[data-theme="matrix"] .text-brand-text {
+    text-shadow: 0 0 8px rgb(0 255 65 / 0.35);
+  }
+  :root[data-theme="matrix"] :focus-visible {
+    box-shadow: 0 0 14px rgb(0 255 65 / 0.55);
+  }
+  :root[data-theme="matrix"] :is(input, textarea) {
+    caret-color: #00ff41;
+    caret-shape: block;
   }
 
   /* Cyberpunk: neon glow on primary actions and the current page; a pink caret. */
@@ -546,4 +556,42 @@
 :root[data-theme="cyberpunk"] h1 {
   color: #ff4d8d;
   text-shadow: 0 0 14px rgb(255 42 109 / 0.55);
+}
+
+/* Matrix: let the digital rain (MatrixRain.tsx) show through the page background,
+   and set page titles like a terminal prompt: "› title" and a blinking block cursor.
+   The prompt and cursor are decoration, so screen readers get empty alt text. */
+:root[data-theme="matrix"] .bg-bg,
+:root[data-theme="matrix"] body {
+  background: transparent;
+}
+/* The page's own background and scanlines go on <html>, beneath the rain;
+   a <body> background would paint over it. */
+:root[data-theme="matrix"] {
+  background: var(--bg) repeating-linear-gradient(0deg, rgb(0 255 65 / 0.03) 0 1px, transparent 1px 3px);
+}
+:root[data-theme="matrix"] h1 {
+  font-family: var(--font-crt), var(--font-roboto-mono), monospace;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+}
+:root[data-theme="matrix"] h1::before {
+  content: "› " / "";
+  color: var(--fg-3);
+}
+:root[data-theme="matrix"] h1::after {
+  content: "▋" / "";
+  margin-left: 0.15em;
+  color: var(--brand);
+  animation: matrix-cursor 1.1s steps(1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="matrix"] h1::after {
+    animation: none;
+  }
+}
+@keyframes matrix-cursor {
+  50% {
+    opacity: 0;
+  }
 }
