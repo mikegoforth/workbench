@@ -433,9 +433,44 @@
     caret-shape: block;
   }
 
-  /* Cyberpunk: neon glow on primary actions and the current page; a pink caret. */
-  :root[data-theme="cyberpunk"] .bg-brand {
-    box-shadow: 0 0 14px -2px rgb(0 229 255 / 0.65);
+  /* Cyberpunk: a HUD. Cut-corner primary buttons, neon brackets on card corners,
+     techno type for section titles, a glowing current page, pink caret and focus. */
+  :root[data-theme="cyberpunk"] :is(button, a).bg-brand {
+    clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  }
+  :root[data-theme="cyberpunk"] section.bg-surface {
+    position: relative;
+  }
+  :root[data-theme="cyberpunk"] section.bg-surface::before,
+  :root[data-theme="cyberpunk"] section.bg-surface::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+  }
+  :root[data-theme="cyberpunk"] section.bg-surface::before {
+    top: -1px;
+    left: -1px;
+    border-top: 2px solid #00e5ff;
+    border-left: 2px solid #00e5ff;
+  }
+  :root[data-theme="cyberpunk"] section.bg-surface::after {
+    right: -1px;
+    bottom: -1px;
+    border-right: 2px solid #ff2a6d;
+    border-bottom: 2px solid #ff2a6d;
+  }
+  :root[data-theme="cyberpunk"] h2 {
+    font-family: var(--font-cyber), var(--font-roboto), sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  :root[data-theme="cyberpunk"] :focus-visible {
+    box-shadow: 0 0 14px rgb(255 42 109 / 0.6);
+  }
+  :root[data-theme="cyberpunk"] ::selection {
+    background: rgb(255 42 109 / 0.35);
   }
   :root[data-theme="cyberpunk"] [aria-current="page"] {
     text-shadow: 0 0 12px rgb(0 229 255 / 0.5);
@@ -551,11 +586,71 @@
   }
 }
 
-/* Cyberpunk's hot-pink page titles. Outside the layers on purpose: the title's
-   text color is a utility class, which would win over anything in a layer. */
+/* Cyberpunk, outside the layers on purpose (utility classes would win otherwise):
+   - page titles in techno type with a cyan/pink colour fringe and a short glitch every few seconds;
+   - a neon city backdrop on <html> (magenta and cyan haze, a faint HUD grid) and a slow
+     light sweep, showing through the page's transparent background around the cards;
+   - pink fill when hovering a primary action. */
 :root[data-theme="cyberpunk"] h1 {
-  color: #ff4d8d;
-  text-shadow: 0 0 14px rgb(255 42 109 / 0.55);
+  font-family: var(--font-cyber), var(--font-roboto), sans-serif;
+  letter-spacing: 0.03em;
+  color: #fbe9ff;
+  text-shadow: -1.5px 0 rgb(0 229 255 / 0.75), 1.5px 0 rgb(255 42 109 / 0.8), 0 0 18px rgb(255 42 109 / 0.45);
+  animation: cyber-glitch 7s steps(1) infinite;
+}
+@keyframes cyber-glitch {
+  93% {
+    transform: translate(1px, -1px) skewX(-6deg);
+    text-shadow: -4px 0 rgb(0 229 255 / 0.9), 3px 0 rgb(255 42 109 / 0.9), 0 0 18px rgb(255 42 109 / 0.45);
+  }
+  95% {
+    transform: translate(-2px, 1px);
+    text-shadow: 3px 0 rgb(0 229 255 / 0.9), -4px 0 rgb(255 42 109 / 0.9), 0 0 18px rgb(255 42 109 / 0.45);
+  }
+  97% {
+    transform: none;
+  }
+}
+:root[data-theme="cyberpunk"] .bg-bg,
+:root[data-theme="cyberpunk"] body {
+  background: transparent;
+}
+:root[data-theme="cyberpunk"] {
+  background:
+    radial-gradient(ellipse 60% 45% at 8% -5%, rgb(255 42 109 / 0.2), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 100% 105%, rgb(0 229 255 / 0.16), transparent 70%),
+    linear-gradient(rgb(90 46 166 / 0.14) 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(90deg, rgb(90 46 166 / 0.14) 1px, transparent 1px) 0 0 / 44px 44px,
+    var(--bg);
+  background-attachment: fixed;
+}
+:root[data-theme="cyberpunk"]::after {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: 35vh;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(0 229 255 / 0.07) 55%, rgb(255 42 109 / 0.05) 70%, transparent);
+  animation: cyber-sweep 11s linear infinite;
+}
+@keyframes cyber-sweep {
+  from {
+    transform: translateY(-40vh);
+  }
+  to {
+    transform: translateY(110vh);
+  }
+}
+:root[data-theme="cyberpunk"] :is(button, a).bg-brand:hover {
+  background-color: #ff2a6d;
+  color: #12001f;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="cyberpunk"] h1,
+  :root[data-theme="cyberpunk"]::after {
+    animation: none;
+  }
 }
 
 /* Matrix: let the digital rain (MatrixRain.tsx) show through the page background,
