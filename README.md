@@ -5,6 +5,7 @@
 [![Electron](https://img.shields.io/badge/-Electron-47848F?logo=electron&logoColor=white)](docs/development.md#desktop-app)
 [![Next.js](https://img.shields.io/badge/-Next.js-000000?logo=nextdotjs&logoColor=white)](docs/development.md)
 
+[![Latest release](https://img.shields.io/github/v/release/mikegoforth/workbench)](https://github.com/mikegoforth/workbench/releases/latest)
 [![CI](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -31,7 +32,23 @@ It runs entirely on your Mac. There are no accounts and nothing is hosted.
 
 A Mac (macOS 13 or later) with Node.js 20.9+, Docker Desktop or OrbStack, and Git. The GitHub CLI and VS Code are optional. On first launch, setup checks for each of these and links to anything missing.
 
-## Get started
+## Install
+
+Download the `.dmg` for your Mac from the [latest release](https://github.com/mikegoforth/workbench/releases/latest): `arm64` for Apple silicon (M1 and later), `x64` for Intel. Open it and drag workbench to Applications.
+
+The app isn't notarized by Apple yet, so macOS blocks it the first time you open it. Go to **System Settings → Privacy & Security** and click **Open Anyway**. You only need to do this once.
+
+When a new version comes out, workbench shows a banner with a link to download it.
+
+To check a download was built from this repo by its release workflow, use the [GitHub CLI](https://cli.github.com):
+
+```bash
+gh attestation verify workbench-<version>-arm64.dmg --repo mikegoforth/workbench
+```
+
+Each release also lists every file's SHA-256 in `SHA256SUMS`.
+
+## Run from source
 
 ```bash
 npm install

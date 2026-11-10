@@ -80,6 +80,10 @@ const config = {
     notarize: signed,
   },
   dmg: {
+    // Name both by chip (arm64, x64): by default the Intel one has no suffix,
+    // which is easy to mistake for the only download. The zips keep the
+    // default names that installed apps' update feed expects.
+    artifactName: "${productName}-${version}-${arch}.${ext}",
     writeUpdateInfo: false,
   },
   // GitHub releases must be public for the app to read them without a token
