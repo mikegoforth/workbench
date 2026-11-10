@@ -130,6 +130,8 @@ export interface Container {
   startedAt: string | null;
   finishedAt: string | null;
   ports: number[];
+  /** Published TCP ports with the host address each is bound to ("0.0.0.0", "::", "127.0.0.1"). */
+  bindings?: { address: string; port: number }[];
   /** Compose project and service, if Compose created it. */
   stack: string | null;
   service: string | null;
@@ -216,6 +218,8 @@ function parsePs(line: string, now: number): Container | null {
   const ports = new Set<number>();
   // "0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp": the host side is before "->".
   for (const m of published.matchAll(/:(\d+)->/g)) ports.add(Number(m[1]));
+  const bindings: { address: string; port: number }[] = [];
+  for (const m of published.matchAll(/([^\s,]+):(\d+)->\d+\/tcp/g)) bindings.push({ address: m[1].replace(/^\[(.*)\]$/, "$1"), port: Number(m[2]) });
   return {
     id,
     name,
@@ -224,6 +228,7 @@ function parsePs(line: string, now: number): Container | null {
     ...parseStatus(status, state, now),
     oomKilled: false,
     ports: [...ports].sort((a, b) => a - b),
+    bindings,
     stack: stack || null,
     service: service || null,
     workingDir: workingDir || null,

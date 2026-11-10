@@ -36,6 +36,10 @@ export const RELEASES: Release[] = [
         text: "Three special themes with character: Matrix (phosphor green in terminal type, with digital rain behind the page), Cyberpunk (a neon city backdrop, glitching titles and cut-corner controls) and Crypto (gold on midnight, with ticker green and red).",
       },
       {
+        kind: "new",
+        text: "Ports: every TCP port listening on your computer and what's using it (a project's dev server or script, a Docker container, or another app), flagging any open beyond localhost. Open web ports in the browser, and stop what workbench runs right from the list.",
+      },
+      {
         kind: "changed",
         text: "A roomier, calmer layout: more space around cards and rows, softer corners, and a lighter top bar and sidebar.",
       },

@@ -3,18 +3,19 @@ import type { Status } from "@/lib/status";
 import type { DockerDaemon, Overview, ProjectInfo } from "@/lib/types";
 
 /** Pages in the left nav. */
-export type View = "dashboard" | "projects" | "servers" | "attention" | "pulls" | "activity" | "todos" | "hidden" | "folder" | "setup";
+export type View = "dashboard" | "projects" | "servers" | "ports" | "attention" | "pulls" | "activity" | "todos" | "hidden" | "folder" | "setup";
 
 /** Tabs on a project's page. */
 export type DetailTab = "details" | "changes" | "dev" | "logs" | "history" | "github" | "readme";
 
-export const VIEWS: View[] = ["dashboard", "projects", "servers", "attention", "pulls", "activity", "todos", "hidden", "folder", "setup"];
+export const VIEWS: View[] = ["dashboard", "projects", "servers", "ports", "attention", "pulls", "activity", "todos", "hidden", "folder", "setup"];
 export const DETAIL_TABS: DetailTab[] = ["details", "changes", "dev", "logs", "history", "github", "readme"];
 
 export const VIEW_TITLE: Record<View, string> = {
   dashboard: "Dashboard",
   projects: "Projects",
   servers: "Running",
+  ports: "Ports",
   attention: "Needs attention",
   pulls: "Pull requests",
   activity: "Activity",

@@ -740,6 +740,68 @@ export function stopScript(name: string): Promise<void> {
 
 // ---- Everything running ----------------------------------------------------
 
+/** A process workbench started that is still running (its pid is the root of the process tree). */
+export interface LiveRun {
+  project: string;
+  slot: Slot;
+  kind: TaskKind;
+  /** For kind "script": which package.json script. */
+  script: string | null;
+  pid: number;
+  startedAt: string;
+}
+
+/**
+ * Every process workbench started, in either slot of any project, that is
+ * still the process it started (its start time still matches). One `ps` (one
+ * PowerShell call on Windows; /proc on Linux) for all of them.
+ */
+export async function liveRuns(): Promise<LiveRun[]> {
+  const states: { name: string; slot: Slot; state: RunState }[] = [];
+  for (const slot of ["dev", "script"] as const) {
+    let files: string[] = [];
+    try {
+      files = fs.readdirSync(slotDir(slot)).filter((f) => f.endsWith(".json"));
+    } catch {
+      continue;
+    }
+    for (const file of files) {
+      const stem = file.slice(0, -".json".length);
+      const state = readStateFile(stem, slot);
+      if (state?.pid && state.lstart) states.push({ name: state.project ?? stem, slot, state });
+    }
+  }
+  if (states.length === 0) return [];
+  let live: (pid: number) => string | null | undefined;
+  if (platform() === "linux") {
+    live = linuxProcessStart;
+  } else if (platform() === "windows") {
+    const times = await windowsStartTimes(states.map((s) => s.state.pid));
+    live = (pid) => times.get(pid);
+  } else {
+    // ps exits non-zero when some pids are gone, but still prints the live ones.
+    const stdout = await run("ps", ["-o", "pid=,lstart=", "-p", states.map((s) => s.state.pid).join(",")])
+      .then((r) => r.stdout)
+      .catch((e: { stdout?: string }) => e.stdout ?? "");
+    const times = new Map<number, string>();
+    for (const line of stdout.split("\n")) {
+      const match = line.trim().match(/^(\d+)\s+(.+)$/);
+      if (match) times.set(Number(match[1]), match[2].trim());
+    }
+    live = (pid) => times.get(pid);
+  }
+  return states
+    .filter(({ state }) => live(state.pid) === state.lstart)
+    .map(({ name, slot, state }) => ({
+      project: name,
+      slot,
+      kind: state.kind ?? "dev",
+      script: state.kind === "script" ? (state.script ?? null) : null,
+      pid: state.pid,
+      startedAt: state.startedAt,
+    }));
+}
+
 /**
  * Projects with something running: a process we started in either slot, or a
  * compose container whose working dir is in a project folder (however it was
@@ -752,45 +814,7 @@ export async function runningProjects(): Promise<{
   problems: Record<string, ContainerProblem[]>;
   docker: DockerDaemon;
 }> {
-  const names = new Set<string>();
-
-  const states: { name: string; state: RunState }[] = [];
-  for (const slot of ["dev", "script"] as const) {
-    let files: string[] = [];
-    try {
-      files = fs.readdirSync(slotDir(slot)).filter((f) => f.endsWith(".json"));
-    } catch {
-      continue;
-    }
-    for (const file of files) {
-      const stem = file.slice(0, -".json".length);
-      const state = readStateFile(stem, slot);
-      if (state?.pid && state.lstart) states.push({ name: state.project ?? stem, state });
-    }
-  }
-  if (states.length > 0 && platform() === "linux") {
-    for (const { name, state } of states) {
-      if (linuxProcessStart(state.pid) === state.lstart) names.add(name);
-    }
-  } else if (states.length > 0 && platform() === "windows") {
-    const live = await windowsStartTimes(states.map((s) => s.state.pid));
-    for (const { name, state } of states) {
-      if (live.get(state.pid) === state.lstart) names.add(name);
-    }
-  } else if (states.length > 0) {
-    // ps exits non-zero when some pids are gone, but still prints the live ones.
-    const stdout = await run("ps", ["-o", "pid=,lstart=", "-p", states.map((s) => s.state.pid).join(",")])
-      .then((r) => r.stdout)
-      .catch((e: { stdout?: string }) => e.stdout ?? "");
-    const live = new Map<number, string>();
-    for (const line of stdout.split("\n")) {
-      const match = line.trim().match(/^(\d+)\s+(.+)$/);
-      if (match) live.set(Number(match[1]), match[2].trim());
-    }
-    for (const { name, state } of states) {
-      if (live.get(state.pid) === state.lstart) names.add(name);
-    }
-  }
+  const names = new Set<string>((await liveRuns()).map((r) => r.project));
 
   const ports = new Map<string, Set<number>>();
   // A container started from a project's subfolder (portland/api) counts for that project.

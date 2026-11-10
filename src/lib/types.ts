@@ -387,3 +387,41 @@ export interface NotesData {
     todos: TodoItem[];
   };
 }
+
+/** What holds a listening port. */
+export type PortOwner =
+  /** A process workbench started for a project (its dev environment, an install, or a script), or one of its children. */
+  | { kind: "run"; project: string; slot: "dev" | "script"; task: "dev" | "install" | "script"; script: string | null }
+  /** A Docker container publishing the port; `stackDir` is its compose folder relative to the project's. */
+  | { kind: "container"; project: string | null; container: string; image: string; stack: string | null; service: string | null; stackDir: string | null }
+  /** Any other process; `project` when its working folder is in one (e.g. a dev server started in a terminal). */
+  | { kind: "process"; project: string | null }
+  /** workbench's own server. */
+  | { kind: "self" };
+
+export interface ListeningPort {
+  port: number;
+  /** Addresses it's bound to, as reported ("127.0.0.1", "::1", "*", "0.0.0.0", "::"). */
+  addresses: string[];
+  /** "loopback": this machine only; "network": all interfaces or a non-loopback address; null if unknown. */
+  scope: "loopback" | "network" | null;
+  pid: number | null;
+  /** The process name, when it could be seen. */
+  process: string | null;
+  /** When the process (or container) started, when known. */
+  startedAt: string | null;
+  owner: PortOwner;
+  /** http://localhost:<port> when it's likely a web server reachable on localhost. */
+  url: string | null;
+}
+
+export interface PortsResult {
+  ports: ListeningPort[];
+  /** The tool that listed them; null if none could run. */
+  source: "lsof" | "ss" | "netstat" | null;
+  /** Why the list may be empty or incomplete. */
+  error: string | null;
+  /** A caveat about what couldn't be seen (other users' processes without admin rights). */
+  note: string | null;
+  scannedAt: string;
+}
