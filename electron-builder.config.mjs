@@ -9,6 +9,13 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+// The release workflow passes every signing secret, and a secret that isn't set
+// arrives as an empty string. electron-builder treats an empty CSC_LINK as a
+// certificate path (and fails with "<project dir> not a file"), so unset them.
+for (const name of ["CSC_LINK", "CSC_KEY_PASSWORD", "CSC_NAME", "APPLE_ID", "APPLE_APP_SPECIFIC_PASSWORD", "APPLE_TEAM_ID"]) {
+  if (!process.env[name]?.trim()) delete process.env[name];
+}
+
 function hasDeveloperId() {
   if (process.env.CSC_LINK || process.env.CSC_NAME) return true;
   try {
