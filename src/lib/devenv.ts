@@ -426,7 +426,8 @@ async function launch(name: string, dir: string, slot: Slot, extra: Pick<RunStat
   const out = fs.openSync(logPath(name, slot), "w");
   let child;
   try {
-    child = spawn(command, args, {
+    // The program is decided at run time; tell the build tracer not to follow it.
+    child = spawn(/*turbopackIgnore: true*/ command, args, {
       cwd: dir,
       // Own process group: survives workbench, and Stop can signal the whole tree. On
       // Windows it's out of workbench's job (which would end it with workbench), and
