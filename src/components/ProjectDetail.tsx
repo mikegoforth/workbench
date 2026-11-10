@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowDown,
   CirclePause,
@@ -11,15 +11,12 @@ import {
   Eye,
   EyeOff,
   LoaderCircle,
-  Play,
   Plus,
   RefreshCw,
-  Square,
   SquareTerminal,
   X,
 } from "lucide-react";
 import type { StripState } from "@/lib/attention";
-import { timeAgo } from "@/lib/format";
 import { openInEditor, openInTerminal } from "@/lib/openInEditor";
 import { repoHostLabel } from "@/lib/repoUrl";
 import { projectStatus } from "@/lib/status";
@@ -28,10 +25,11 @@ import { useShortcut } from "@/lib/useShortcut";
 import AttentionPanel from "./AttentionPanel";
 import ChangedFiles from "./ChangedFiles";
 import ContainerLogs from "./ContainerLogs";
-import { devState, RunPanel, useDevStatus } from "./DevEnvironment";
+import { LifecycleButton, RunPanel, useDevStatus } from "./DevEnvironment";
 import GitHubPanel from "./GitHubPanel";
 import HistoryPanel, { RecentCommits } from "./HistoryPanel";
-import { Badge, Button, CiBadge, Menu, PageBody, Panel, PropertyList, StatusIcon, SyncValue, Tabs, TextButton, TitleBar, type MenuItem, type TabItem } from "./ui";
+import ResumeSummary from "./ResumeSummary";
+import { Badge, Button, CiBadge, Menu, PageBody, Panel, PropertyList, StatusIcon, Tabs, tabPanelProps, TitleBar, type MenuItem, type TabItem } from "./ui";
 import type { DetailTab } from "./model";
 import ReadmePanel from "./ReadmePanel";
 import ScriptsPanel from "./ScriptsPanel";
@@ -96,7 +94,11 @@ export default function ProjectDetail({
   const [notes, setNotes] = useState(project.notes || "");
   const [todos, setTodos] = useState<TodoItem[]>(project.todos || []);
   const [newTodo, setNewTodo] = useState("");
-  const [saving, setSaving] = useState(false);
+  // Notes save on blur: "Saving…", then a brief "Saved".
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
+  const [notesFocused, setNotesFocused] = useState(false);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [opening, setOpening] = useState<"vscode" | "terminal" | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
@@ -126,23 +128,23 @@ export default function ProjectDetail({
   const onGitHub = !!project.repoUrl && repoHostLabel(project.repoUrl) === "GitHub";
   const behind = project.aheadBehind?.behind ?? 0;
   const ahead = project.aheadBehind?.ahead ?? 0;
-  const modified = project.uncommittedChanges ?? 0;
-  const untracked = project.untrackedFiles ?? 0;
-  const changed = modified + untracked;
+  const changed = (project.uncommittedChanges ?? 0) + (project.untrackedFiles ?? 0);
   const pendingTodos = todos.filter((t) => !t.done).length;
   const historyKey = `${project.branch}|${project.lastCommitDate}|${ahead}|${behind}|${project.lastFetchedAt}`;
-  const run = devState(dev);
+  const notesOpen = notesFocused || notes.length > 0;
 
   const persist = async (nextNotes: string, nextTodos: TodoItem[]) => {
-    setSaving(true);
+    clearTimeout(savedTimer.current);
+    setSaveState("saving");
     setNotesError(null);
     try {
       await saveNotes(project.name, nextNotes, nextTodos);
       onUpdate({ ...project, notes: nextNotes, todos: nextTodos });
+      setSaveState("saved");
+      savedTimer.current = setTimeout(() => setSaveState("idle"), 2000);
     } catch (e) {
       setNotesError((e as Error).message);
-    } finally {
-      setSaving(false);
+      setSaveState("idle");
     }
   };
 
@@ -174,30 +176,18 @@ export default function ProjectDetail({
       : { label: "Hide from lists", icon: EyeOff, onSelect: () => onHiddenChange(true) }
   );
 
+  // The title bar owns the lifecycle: Start is the page's one filled button.
   const actions = (
     <>
+      <span className="mr-2 ml-2 inline-flex">
+        <LifecycleButton dev={dev} />
+      </span>
       <Button variant="ghost" icon={opening === "vscode" ? LoaderCircle : CodeXml} spin={opening === "vscode"} onClick={() => openWith("vscode")} disabled={opening !== null} title="Open in VS Code (O)">
         Open in VS Code
       </Button>
       <Button variant="ghost" icon={SquareTerminal} onClick={() => openWith("terminal")} disabled={opening !== null} title="Open a terminal window here (T)">
         Terminal
       </Button>
-      {dev.canStop ? (
-        <Button variant="ghost" icon={dev.pending === "stop" ? LoaderCircle : Square} spin={dev.pending === "stop"} onClick={() => dev.act("stop")} className="text-bad! hover:bg-bad-soft!">
-          Stop
-        </Button>
-      ) : (
-        <Button
-          variant="ghost"
-          icon={dev.pending === "start" ? LoaderCircle : Play}
-          spin={dev.pending === "start"}
-          onClick={() => dev.act("start")}
-          disabled={!dev.canStart}
-          title={dev.status && dev.status.steps.length === 0 ? "Nothing to start in this project" : "Start the dev environment (S)"}
-        >
-          Start
-        </Button>
-      )}
       {sync.enabled && (
         <Button variant="ghost" icon={RefreshCw} spin={sync.fetching} onClick={sync.fetchRemote} disabled={sync.fetching || pullPending} title="git fetch --all --prune">
           Fetch
@@ -214,7 +204,7 @@ export default function ProjectDetail({
 
   const tabs: TabItem<DetailTab>[] = [
     { id: "details", label: "Details" },
-    ...(isGit ? [{ id: "changes" as const, label: "Changes", count: changed }] : []),
+    ...(isGit ? [{ id: "changes" as const, label: "Changes", count: changed || undefined }] : []),
     { id: "dev", label: "Dev environment" },
     // Until the status arrives, trust a link straight to the Logs tab.
     ...((dev.status ? dev.status.stacks.some((st) => st.services.some((sv) => sv.container)) : tab === "logs")
@@ -228,118 +218,57 @@ export default function ProjectDetail({
 
   // ---- Details ----
 
+  // Branch, upstream, working tree and last commit are in the summary above;
+  // status and the dev server are in the title bar.
   const detailRows: { label: string; value: ReactNode }[] = [
-    {
-      label: "Status",
-      value: (
-        <span className="inline-flex flex-wrap items-center gap-2">
-          <StatusIcon status={status} label size={16} />
-          {state.parked && <Badge>Parked</Badge>}
-          {project.hidden && <Badge icon={EyeOff}>Hidden</Badge>}
-        </span>
-      ),
-    },
     { label: "Location", value: <span className="font-mono text-[12.5px]">{project.path}</span> },
   ];
-  if (isGit) {
-    if (project.repoUrl) {
-      detailRows.push({
-        label: "Repository",
-        value: (
-          <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-text hover:underline">
-            {project.repoUrl.replace(/^https?:\/\//, "")}
-            <ExternalLink aria-hidden size={13} />
-          </a>
-        ),
-      });
-    }
-    detailRows.push({ label: "Branch", value: <span className="font-mono text-[12.5px]">{project.branch ?? "detached HEAD"}</span> });
+  if (project.repoUrl) {
     detailRows.push({
-      label: "Upstream",
-      value: project.hasRemote ? (
-        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-          <SyncValue ahead={ahead} behind={behind} />
-          <span className="text-fg-3">
-            {ahead || behind ? `${ahead} ahead, ${behind} behind` : "In sync"} · fetched{" "}
-            {sync.fetching ? "now" : project.lastFetchedAt ? timeAgo(project.lastFetchedAt) : "never"}
-          </span>
-        </span>
-      ) : (
-        <span className="text-fg-3">No remote</span>
+      label: "Repository",
+      value: (
+        <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-text hover:underline">
+          {project.repoUrl.replace(/^https?:\/\//, "")}
+          <ExternalLink aria-hidden size={13} />
+        </a>
       ),
     });
-    detailRows.push({
-      label: "Working tree",
-      value: changed ? (
-        <TextButton onClick={() => onTab("changes")} className="text-[13px]!">
-          {modified} modified, {untracked} untracked
-        </TextButton>
-      ) : (
-        <span className="text-fg-3">Clean</span>
-      ),
-    });
-    if (gh) {
-      detailRows.push({
-        label: "CI",
-        value: (
-          <span className="inline-flex flex-wrap items-center gap-2">
-            <CiBadge github={gh} loaded={overviewLoaded} />
-            {gh.ciUrl && (
-              <a href={gh.ciUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text hover:underline">
-                Checks
-              </a>
-            )}
-          </span>
-        ),
-      });
-      detailRows.push({
-        label: "Pull requests",
-        value: (
-          <span>
-            {gh.openPullRequests} open
-            {gh.reviewRequested > 0 && <span className="ml-2 font-medium text-warn">{gh.reviewRequested} awaiting your review</span>}
-          </span>
-        ),
-      });
-    }
-    detailRows.push({
-      label: "Last commit",
-      value: project.lastCommitDate ? (
-        <span>
-          {project.lastCommitMessage}
-          <span className="block text-[12.5px] text-fg-3">
-            {project.lastCommitAuthor} · {timeAgo(project.lastCommitDate)}
-          </span>
-        </span>
-      ) : (
-        <span className="text-fg-3">No commits yet</span>
-      ),
-    });
-  } else {
-    detailRows.push({ label: "Git", value: <span className="text-fg-3">Not a git repository</span> });
   }
-  detailRows.push({
-    label: "Dev server",
-    value: (
-      <span className="inline-flex flex-wrap items-center gap-2">
-        <Badge tone={run.tone} dot pulse={run.tone === "ok" || run.busy}>
-          {run.label}
-        </Badge>
-        {dev.status?.url && (
-          <a href={dev.status.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[12.5px] text-brand-text hover:underline">
-            {dev.status.url}
-          </a>
-        )}
-      </span>
-    ),
-  });
+  if (gh) {
+    detailRows.push({
+      label: "CI",
+      value: (
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <CiBadge github={gh} loaded={overviewLoaded} />
+          {/* Only link to checks that exist. */}
+          {gh.ci && gh.ciUrl && (
+            <a href={gh.ciUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text hover:underline">
+              Checks
+            </a>
+          )}
+        </span>
+      ),
+    });
+    detailRows.push({
+      label: "Pull requests",
+      value: (
+        <span>
+          {gh.openPullRequests} open
+          {gh.reviewRequested > 0 && <span className="ml-2 font-medium text-warn">{gh.reviewRequested} awaiting your review</span>}
+        </span>
+      ),
+    });
+  }
 
   const notesCard = (
     <Panel
       id="notes-heading"
       title="Notes and todos"
-      description="Where you left off and what's next"
-      actions={saving ? <span className="text-[12.5px] text-fg-3">Saving…</span> : undefined}
+      actions={
+        <span aria-live="polite" className="text-[12.5px] text-fg-3">
+          {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : ""}
+        </span>
+      }
       bodyClassName="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-line max-md:divide-y"
     >
       <div className="p-4">
@@ -349,13 +278,18 @@ export default function ProjectDetail({
         <textarea
           id="project-notes"
           value={notes}
-          rows={7}
+          // One line until it's in use, so an empty note doesn't take the page's best spot.
+          rows={notesOpen ? 6 : 1}
           onChange={(e) => setNotes(e.target.value)}
+          onFocus={() => setNotesFocused(true)}
           onBlur={(e) => {
+            setNotesFocused(false);
             if (e.target.value !== (project.notes || "")) persist(e.target.value, todos);
           }}
-          className="block w-full resize-y rounded border border-line bg-surface px-3 py-2 text-[13.5px] leading-relaxed text-fg focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
-          placeholder="Where did you leave off? What's next?"
+          className={`block w-full rounded border border-line bg-surface px-3 text-[13.5px] leading-relaxed text-fg focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none ${
+            notesOpen ? "resize-y py-2" : "h-8 resize-none overflow-hidden py-1"
+          }`}
+          placeholder={notesOpen ? "Where did you leave off? What's next?" : "Add a note…"}
         />
         {notesError && <p className="mt-2 text-[12.5px] font-medium text-bad">{notesError}</p>}
       </div>
@@ -407,36 +341,84 @@ export default function ProjectDetail({
     </Panel>
   );
 
+  // Is it running, and where: the project's status, then the dev server's URL.
+  const titleStatus = (
+    <span className="ml-1 inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+      <StatusIcon status={status} label />
+      {state.parked && status.label !== "Parked" && <Badge>Parked</Badge>}
+      {project.hidden && <Badge icon={EyeOff}>Hidden</Badge>}
+      {dev.status?.url && (
+        <a
+          href={dev.status.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open the dev server"
+          className="inline-flex items-center gap-1 font-mono text-[12.5px] text-brand-text hover:underline"
+        >
+          {dev.status.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+          <ExternalLink aria-hidden size={12} />
+        </a>
+      )}
+    </span>
+  );
+
   return (
     <>
       <div className="sticky top-0 z-20">
-        <TitleBar title={project.name} onBack={onBack} backLabel={`Back to ${backLabel}`} status={<StatusIcon status={status} />} actions={actions} />
-        <Tabs label="Project sections" tabs={tabs} value={activeTab} onChange={onTab} />
+        <TitleBar title={project.name} onBack={onBack} backLabel={`Back to ${backLabel}`} status={titleStatus} actions={actions} />
+        <Tabs label="Project sections" tabs={tabs} value={activeTab} onChange={onTab} idPrefix="project" shortcuts />
       </div>
       <PageBody>
         {(openError || stripError || sync.error) && <Banner>{openError ?? stripError ?? sync.error}</Banner>}
 
+        <div {...tabPanelProps(activeTab, "project")}>
+
         {activeTab === "details" && (
-          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <div className="min-w-0 space-y-6">
-              {notesCard}
-              <Panel id="details-heading" title="Project details" bodyClassName="">
-                <PropertyList rows={detailRows} />
-              </Panel>
-              {isGit && <RecentCommits projectName={project.name} repoUrl={project.repoUrl} refreshKey={historyKey} onViewAll={() => onTab("history")} />}
-            </div>
-            <div className="min-w-0 space-y-6">
-              <AttentionPanel project={project} state={state} dev={dev} pullPending={pullPending} onPull={onPull} onLogs={() => onTab("logs")} />
-              <RunPanel dev={dev} dockerStarting={dockerStarting} onStartDocker={onStartDocker} />
-              {isGit && (
-                <ChangedFiles
-                  projectName={project.name}
-                  files={project.files ?? []}
-                  truncated={project.filesTruncated}
-                  limit={6}
-                  onViewAll={() => onTab("changes")}
+          <div className="space-y-6">
+            <ResumeSummary
+              project={project}
+              dev={dev}
+              historyKey={historyKey}
+              fetching={sync.fetching}
+              onFetch={sync.enabled && !pullPending ? sync.fetchRemote : undefined}
+              onChanges={() => onTab("changes")}
+              onHistory={() => onTab("history")}
+            />
+            {/* DOM order is reading order: on a phone, attention and Run come right after the summary. */}
+            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+              <div className="min-w-0 space-y-6">
+                <AttentionPanel
+                  project={project}
+                  state={state}
+                  dev={dev}
+                  pullPending={pullPending}
+                  onPull={onPull}
+                  onLogs={() => onTab("logs")}
+                  onChanges={isGit ? () => onTab("changes") : undefined}
                 />
-              )}
+                <RunPanel dev={dev} dockerStarting={dockerStarting} onStartDocker={onStartDocker} />
+                {isGit && notesCard}
+              </div>
+              <div className="min-w-0 space-y-6">
+                {/* Without git there's nothing else for this column, so notes go here. */}
+                {!isGit && notesCard}
+                {isGit && (
+                  <ChangedFiles
+                    projectName={project.name}
+                    files={project.files ?? []}
+                    truncated={project.filesTruncated}
+                    limit={6}
+                    onViewAll={() => onTab("changes")}
+                  />
+                )}
+                {isGit && <RecentCommits projectName={project.name} repoUrl={project.repoUrl} refreshKey={historyKey} onViewAll={() => onTab("history")} />}
+                {/* Without git, the summary already says everything this would. */}
+                {isGit && (
+                  <Panel id="details-heading" title="Project details" bodyClassName="">
+                    <PropertyList rows={detailRows} />
+                  </Panel>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -450,7 +432,15 @@ export default function ProjectDetail({
             <RunPanel dev={dev} dockerStarting={dockerStarting} onStartDocker={onStartDocker} />
             <div className="min-w-0 space-y-6">
               <ScriptsPanel projectName={project.name} onActivity={onActivity} />
-              <AttentionPanel project={project} state={state} dev={dev} pullPending={pullPending} onPull={onPull} onLogs={() => onTab("logs")} />
+              <AttentionPanel
+                project={project}
+                state={state}
+                dev={dev}
+                pullPending={pullPending}
+                onPull={onPull}
+                onLogs={() => onTab("logs")}
+                onChanges={isGit ? () => onTab("changes") : undefined}
+              />
             </div>
           </div>
         )}
@@ -463,8 +453,11 @@ export default function ProjectDetail({
 
         {activeTab === "readme" && <ReadmePanel projectName={project.name} repoUrl={project.repoUrl} />}
 
-        <p className="mt-6 text-[12px] text-fg-3">
-          Keys: <span className="font-mono">O</span> VS Code · <span className="font-mono">T</span> Terminal · <span className="font-mono">S</span> Start
+        </div>
+
+        {/* Keyboard hints: only where there's a keyboard to use them. */}
+        <p className="mt-6 hidden text-[12px] text-fg-3 sm:block">
+          Keys: <span className="font-mono">[</span>/<span className="font-mono">]</span> previous / next tab · <span className="font-mono">O</span> VS Code · <span className="font-mono">T</span> Terminal · <span className="font-mono">S</span> Start
           {project.repoUrl && (
             <>
               {" "}

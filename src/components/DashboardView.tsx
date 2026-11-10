@@ -178,12 +178,12 @@ export default function DashboardView({ ctx, counts, visible, attention, servers
           <Tile>
             <Panel
               id="dash-servers"
-              title="Dev servers"
+              title="Running"
               icon={Server}
               count={servers.length}
               countTone={servers.length ? "ok" : undefined}
               bodyClassName=""
-              footer={<GoTo label="Go to Dev servers" onClick={go("servers")} />}
+              footer={<GoTo label="See everything running" onClick={go("servers")} />}
             >
               {servers.length === 0 ? (
                 <EmptyState icon={Server} title="Nothing running">
@@ -203,7 +203,7 @@ export default function DashboardView({ ctx, counts, visible, attention, servers
             <Panel id="dash-resources" title="Resources" icon={FolderGit2} bodyClassName="">
               <ul className="divide-y divide-line">
                 <ResourceRow icon={FolderGit2} label="Projects" count={counts.projects} onClick={go("projects")} />
-                <ResourceRow icon={Server} label="Dev servers running" count={counts.servers} tone="ok" onClick={go("servers")} />
+                <ResourceRow icon={Server} label="Running projects" count={counts.servers} tone="ok" onClick={go("servers")} />
                 <ResourceRow icon={TriangleAlert} label="Needing attention" count={counts.attention} tone="warn" onClick={go("attention")} />
                 <ResourceRow icon={FileDiff} label="With uncommitted changes" count={counts.changes} onClick={go("projects")} />
                 <ResourceRow icon={ListTodo} label="Open todos" count={counts.todos} tone="info" onClick={go("todos")} />

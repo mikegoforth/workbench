@@ -26,6 +26,8 @@ import {
 import type { Reason } from "@/lib/attention";
 import { SEVERITY_TONE, type Status, type Tone } from "@/lib/status";
 import type { OverviewEntry } from "@/lib/types";
+import { useShortcut } from "@/lib/useShortcut";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
 // Cloud-console primitives: buttons, status, cards, title bars, tables, menus.
 
@@ -316,7 +318,7 @@ export function Panel({
   countTone?: Tone;
   description?: ReactNode;
   actions?: ReactNode;
-  /** A footer link row, e.g. "Go to Dev servers". */
+  /** A footer link row, e.g. "Go to Todos". */
   footer?: ReactNode;
   className?: string;
   bodyClassName?: string;
@@ -394,31 +396,105 @@ export interface TabItem<T extends string> {
   countTone?: Tone;
 }
 
-/** Resource tabs: blue text and underline on the active one. */
+const DEFAULT_TAB_PREFIX = "tabs";
+
+/** The id of a tab button rendered by <Tabs idPrefix={idPrefix}>. */
+export const tabId = (id: string, idPrefix = DEFAULT_TAB_PREFIX) => `${idPrefix}-tab-${id}`;
+
+/** The id <Tabs idPrefix={idPrefix}> expects on the panel showing tab `id` (its aria-controls). */
+export const tabPanelId = (id: string, idPrefix = DEFAULT_TAB_PREFIX) => `${idPrefix}-panel-${id}`;
+
+/**
+ * Spread on the element that shows the active tab's content, so it's announced
+ * as that tab's panel: `<div {...tabPanelProps(activeTab, "project")}>`.
+ */
+export function tabPanelProps(id: string, idPrefix = DEFAULT_TAB_PREFIX) {
+  return { id: tabPanelId(id, idPrefix), role: "tabpanel", "aria-labelledby": tabId(id, idPrefix) } as const;
+}
+
+/**
+ * Resource tabs: blue text and underline on the active one. A WAI-ARIA tab list:
+ * only the active tab is in the tab order; Left/Right/Home/End move and select.
+ * With `shortcuts`, [ and ] select the previous/next tab from anywhere on the
+ * page (unless the user is typing in a field).
+ */
 export function Tabs<T extends string>({
   tabs,
   value,
   onChange,
   label,
+  idPrefix = DEFAULT_TAB_PREFIX,
+  shortcuts = false,
 }: {
   tabs: TabItem<T>[];
   value: T;
   onChange: (id: T) => void;
   label: string;
+  /** Prefix for the tab and panel ids; see tabPanelProps. */
+  idPrefix?: string;
+  /** Bind [ and ] to the previous/next tab. Use on one tab list per page. */
+  shortcuts?: boolean;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const found = tabs.findIndex((t) => t.id === value);
+  // The tab that takes focus from the keyboard: the active one, else the first.
+  const current = Math.max(0, found);
+
+  const select = (index: number, focus: boolean) => {
+    if (tabs.length === 0) return;
+    const i = (index + tabs.length) % tabs.length;
+    if (focus) listRef.current?.querySelectorAll<HTMLElement>('[role="tab"]')[i]?.focus();
+    if (tabs[i].id !== value) onChange(tabs[i].id);
+  };
+
+  useShortcut(["[", "]"], (e) => select(current + (e.key === "]" ? 1 : -1), false), { enabled: shortcuts });
+
+  // Keep the active tab in view when the strip scrolls sideways (phones).
+  useEffect(() => {
+    const list = listRef.current;
+    const tab = list?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    if (!list || !tab) return;
+    const box = list.getBoundingClientRect();
+    const r = tab.getBoundingClientRect();
+    if (r.left < box.left) list.scrollLeft += r.left - box.left - 8;
+    else if (r.right > box.right) list.scrollLeft += r.right - box.right + 8;
+  }, [value]);
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const next = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (next === undefined || e.altKey || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    select(next, true);
+  };
+
   return (
-    <div role="tablist" aria-label={label} className="flex overflow-x-auto border-b border-line bg-surface px-1 sm:px-3">
-      {tabs.map((t) => {
-        const active = t.id === value;
+    <div
+      ref={listRef}
+      role="tablist"
+      aria-label={label}
+      aria-keyshortcuts={shortcuts ? "[ ]" : undefined}
+      // The baseline is an inset shadow, not a border, and the active underline
+      // sits inside its tab, so nothing pokes out of the scroll box (no stray
+      // vertical scrollbar). Sideways it still scrolls, with a quiet scrollbar.
+      className="flex overflow-x-auto overflow-y-hidden bg-surface px-1 shadow-[inset_0_-1px_0_var(--color-line)] [scrollbar-width:none] sm:px-3 sm:[scrollbar-width:thin]"
+    >
+      {tabs.map((t, i) => {
+        const active = i === found;
         return (
           <button
             key={t.id}
+            id={tabId(t.id, idPrefix)}
             type="button"
             role="tab"
             aria-selected={active}
+            aria-controls={active ? tabPanelId(t.id, idPrefix) : undefined}
+            tabIndex={i === current ? 0 : -1}
             onClick={() => onChange(t.id)}
-            className={`-mb-px inline-flex h-12 shrink-0 items-center gap-2 border-b-2 px-5 text-[13.5px] font-medium transition-colors ${
-              active ? "border-brand text-brand-text" : "border-transparent text-fg-2 hover:bg-hover hover:text-fg"
+            onKeyDown={onKeyDown}
+            className={`inline-flex h-12 shrink-0 items-center gap-2 px-5 text-[13.5px] font-medium transition-colors focus-visible:outline-offset-[-2px] ${
+              active
+                ? "text-brand-text shadow-[inset_0_-2px_0_var(--color-brand)]"
+                : "text-fg-2 shadow-[inset_0_-1px_0_var(--color-line)] hover:bg-hover hover:text-fg"
             }`}
           >
             {t.label}

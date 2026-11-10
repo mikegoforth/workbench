@@ -24,7 +24,8 @@ function loadHistory(projectName: string, refreshKey: string): Promise<GitHistor
   return promise;
 }
 
-function useGitHistory(projectName: string, refreshKey: string) {
+/** The repo's commits, branches and stashes; one shared fetch per repo change. */
+export function useGitHistory(projectName: string, refreshKey: string) {
   const [state, setState] = useState<{ data: GitHistory | null; error: string | null }>({ data: null, error: null });
   useEffect(() => {
     let cancelled = false;

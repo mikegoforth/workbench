@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Check, CircleCheck, CircleX, ExternalLink, Info, LoaderCircle, ScrollText, TriangleAlert } from "lucide-react";
 import type { StripState } from "@/lib/attention";
+import { plural } from "@/lib/format";
 import { openInEditor } from "@/lib/openInEditor";
 import type { ProjectInfo, SetupCheck } from "@/lib/types";
 import type { DevControls } from "./DevEnvironment";
@@ -33,7 +34,11 @@ function Row({
   );
 }
 
-/** Needs attention: no-go and hold reasons plus failing setup checks, each with its fix. */
+/**
+ * Needs attention: no-go and hold reasons plus failing setup checks, each with its fix.
+ * Uncommitted work is shown too, as a quiet info row: it never counts as needing you
+ * (see stripState), but it isn't "all clear" either.
+ */
 export default function AttentionPanel({
   project,
   state,
@@ -41,6 +46,7 @@ export default function AttentionPanel({
   pullPending,
   onPull,
   onLogs,
+  onChanges,
   className = "",
 }: {
   project: ProjectInfo;
@@ -50,6 +56,8 @@ export default function AttentionPanel({
   onPull: () => void;
   /** Open the project's container logs. */
   onLogs?: () => void;
+  /** Open the project's changed files. */
+  onChanges?: () => void;
   className?: string;
 }) {
   const reasons = state.reasons.filter((r) => r.severity !== "note");
@@ -58,6 +66,11 @@ export default function AttentionPanel({
   const passing = checks.filter((c) => c.level === "ok");
   const count = reasons.length + problems.filter((c) => c.level === "warn").length;
   const worst = reasons.some((r) => r.severity === "nogo") ? "bad" : count ? "warn" : undefined;
+  const modified = project.uncommittedChanges ?? 0;
+  const untracked = project.untrackedFiles ?? 0;
+  const uncommitted = modified + untracked;
+  const blocking = reasons.length > 0 || problems.some((c) => c.level === "warn");
+  const hasRows = reasons.length > 0 || problems.length > 0 || uncommitted > 0;
 
   const fixFor = (check: SetupCheck) => {
     const action = check.action;
@@ -91,12 +104,14 @@ export default function AttentionPanel({
       className={className}
       bodyClassName=""
     >
-      {reasons.length === 0 && problems.length === 0 ? (
-        <p className="flex items-center gap-2.5 px-4 py-3.5 text-[13.5px] text-fg-2">
+      {!blocking && (
+        <p className={`flex items-center gap-2.5 px-5 py-3.5 text-[13.5px] text-fg-2 ${hasRows ? "border-b border-line" : ""}`}>
           <CircleCheck aria-hidden size={16} strokeWidth={2.25} className="text-ok" />
-          All clear{state.parked ? " (parked)" : ""}.
+          {hasRows ? "Nothing blocking" : "All clear"}
+          {state.parked ? " (parked)" : ""}.
         </p>
-      ) : (
+      )}
+      {hasRows && (
         <ul className="divide-y divide-line">
           {reasons.map((r) => (
             <Row
@@ -136,9 +151,30 @@ export default function AttentionPanel({
               }
             />
           ))}
-          {problems.map((c) => (
-            <Row key={c.id} severity={c.level === "warn" ? "hold" : "info"} title={c.title} detail={c.detail} action={fixFor(c)} />
-          ))}
+          {problems
+            .filter((c) => c.level === "warn")
+            .map((c) => (
+              <Row key={c.id} severity="hold" title={c.title} detail={c.detail} action={fixFor(c)} />
+            ))}
+          {uncommitted > 0 && (
+            <Row
+              severity="info"
+              title={plural(uncommitted, "uncommitted file")}
+              detail={[modified && `${modified} modified`, untracked && `${untracked} untracked`].filter(Boolean).join(", ")}
+              action={
+                onChanges ? (
+                  <Button size="sm" onClick={onChanges} aria-label={`View ${plural(uncommitted, "uncommitted file")}`}>
+                    View
+                  </Button>
+                ) : undefined
+              }
+            />
+          )}
+          {problems
+            .filter((c) => c.level !== "warn")
+            .map((c) => (
+              <Row key={c.id} severity="info" title={c.title} detail={c.detail} action={fixFor(c)} />
+            ))}
         </ul>
       )}
       {passing.length > 0 && (
