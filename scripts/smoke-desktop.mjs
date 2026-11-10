@@ -1,8 +1,8 @@
-// Launches the packaged app from `electron-builder --dir` on this OS and waits
+// Launches the packaged app (as electron-builder left it unpacked, or an installed copy) and waits
 // for its log to say the window loaded, i.e. the bundled server started and
 // the page came up. Used by CI's "Desktop app" jobs:
-//   npm run desktop:build && npx electron-builder --config electron-builder.config.mjs --dir
-//   node scripts/smoke-desktop.mjs
+//   npm run desktop:build && npx electron-builder --config electron-builder.config.mjs --publish never
+//   node scripts/smoke-desktop.mjs [path to an installed copy]
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -28,7 +28,8 @@ function logFile() {
   return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "workbench", "logs", "main.log");
 }
 
-const exe = executable();
+// An explicit path (e.g. the copy the Windows installer put in place) wins.
+const exe = process.argv[2] ? path.resolve(process.argv[2]) : executable();
 if (!exe || !fs.existsSync(exe)) {
   console.error(`No packaged app found in ${release}`);
   process.exit(1);
