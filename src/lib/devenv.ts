@@ -179,10 +179,18 @@ function fileStem(name: string): string {
   return PLAIN_NAME.test(name) ? name : `.h${createHash("sha256").update(name).digest("hex").slice(0, 32)}`;
 }
 
-/** The path for a stem, checked so nothing but a plain file name reaches the file system. */
+/**
+ * The path for a stem: a plain file name, resolved and checked to sit directly
+ * in the slot's folder, so nothing in a name can reach any other path.
+ */
 function stemPath(stem: string, slot: Slot, ext: "json" | "log"): string {
-  if (!FILE_STEM.test(stem)) throw new DevError(400, "Invalid project name");
-  return path.join(slotDir(slot), `${stem}.${ext}`);
+  const dir = path.resolve(slotDir(slot));
+  // Run-time paths in the data folder; the build tracer mustn't follow them.
+  const full = path.resolve(/*turbopackIgnore: true*/ dir, `${stem}.${ext}`);
+  if (!FILE_STEM.test(stem) || stem === "." || stem === ".." || !full.startsWith(dir + path.sep) || path.dirname(full) !== dir) {
+    throw new DevError(400, "Invalid project name");
+  }
+  return full;
 }
 
 const statePath = (name: string, slot: Slot) => stemPath(fileStem(name), slot, "json");

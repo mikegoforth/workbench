@@ -1083,8 +1083,10 @@ describe("runningProjects", () => {
     expect((await runningProjects()).projects).toEqual([{ name: "My App", ports: [] }]);
   });
 
-  it("ignores state files whose names aren't plain", async () => {
+  it("ignores state files whose names aren't plain, or are . or ..", async () => {
     state("dev", "a b", { pid: 11, lstart: LSTART });
+    state("dev", ".", { pid: 11, lstart: LSTART });
+    state("dev", "..", { pid: 11, lstart: LSTART });
     procs.set(11, LSTART);
     expect((await runningProjects()).projects).toEqual([]);
   });
