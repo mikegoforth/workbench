@@ -156,6 +156,11 @@ npm run desktop:dist   # for the system you're on: .dmg (macOS), installer (Wind
 | [Development](docs/development.md) | Commands, tests, the desktop app, releasing and signing, and the code layout |
 | [Requirements](REQUIREMENTS.md) | Dependencies and where their security fixes are announced |
 | [Security](SECURITY.md) | How workbench protects your machine, and how to report a vulnerability |
+| [Contributing](CONTRIBUTING.md) | Reporting bugs, asking for features, and what a pull request needs |
+
+## Feedback and contributing
+
+Found a bug or want a feature? [Open an issue](https://github.com/mikegoforth/workbench/issues). For a security problem, follow [SECURITY.md](SECURITY.md) instead. To contribute a change, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
