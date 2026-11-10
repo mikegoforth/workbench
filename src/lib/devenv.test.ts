@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { EventEmitter } from "events";
 import fs from "fs";
 import os from "os";
@@ -605,8 +606,20 @@ describe("start", () => {
     expect(readLog("dev")).toBe("");
 
     const state = readJson(devFile("alpha.json"));
-    expect(state).toEqual({ pid: 4242, lstart: LSTART, startedAt: expect.any(String), kind: "dev" });
+    expect(state).toEqual({ pid: 4242, lstart: LSTART, startedAt: expect.any(String), kind: "dev", project: "alpha" });
     expect(new Date(state.startedAt).toString()).not.toBe("Invalid Date");
+  });
+
+  it("starts a project whose folder name has spaces or accents, under a hashed file name", async () => {
+    writeFiles({ "package.json": packageJson({ dev: "vite" }) });
+
+    await start("Café App (old)", dir);
+
+    const stem = `.h${createHash("sha256").update("Café App (old)").digest("hex").slice(0, 32)}`;
+    expect(readJson(devFile(`${stem}.json`))).toMatchObject({ pid: 4242, project: "Café App (old)" });
+    expect(fs.existsSync(devFile(`${stem}.log`))).toBe(true);
+    // Nothing named after the raw folder name.
+    expect(fs.readdirSync(devFile()).filter((f) => f.includes("Café"))).toEqual([]);
   });
 
   it("execs the only step directly", async () => {
@@ -1063,6 +1076,20 @@ describe("runningProjects", () => {
     fs.mkdirSync(folder, { recursive: true });
     fs.writeFileSync(path.join(folder, `${name}.json`), typeof content === "string" ? content : JSON.stringify(content));
   }
+
+  it("lists a project stored under a hashed file name by its real name", async () => {
+    state("dev", ".h0123456789abcdef0123456789abcdef", { pid: 11, lstart: LSTART, project: "My App" });
+    procs.set(11, LSTART);
+    expect((await runningProjects()).projects).toEqual([{ name: "My App", ports: [] }]);
+  });
+
+  it("ignores state files whose names aren't plain, or are . or ..", async () => {
+    state("dev", "a b", { pid: 11, lstart: LSTART });
+    state("dev", ".", { pid: 11, lstart: LSTART });
+    state("dev", "..", { pid: 11, lstart: LSTART });
+    procs.set(11, LSTART);
+    expect((await runningProjects()).projects).toEqual([]);
+  });
 
   it("is empty with nothing started and no containers", async () => {
     expect(await runningProjects()).toEqual({ projects: [], problems: {}, docker: RUNNING });
