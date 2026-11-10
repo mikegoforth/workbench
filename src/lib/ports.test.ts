@@ -100,6 +100,8 @@ const run = (over: Partial<LiveRun>): LiveRun => ({
 
 const row = (ports: ListeningPort[], port: number) => ports.find((p) => p.port === port);
 
+let addedGetuid = false;
+
 beforeEach(() => {
   vi.resetAllMocks();
   vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
@@ -108,6 +110,11 @@ beforeEach(() => {
   mocks.dockerSnapshot.mockResolvedValue({ daemon: RUNNING, containers: [] });
   mocks.which.mockImplementation((name: string) => `/usr/bin/${name}`);
   reply = (cmd) => new Error(`unexpected ${cmd}`);
+  // Windows has no process.getuid; give these tests one to spy on (removed again after each).
+  if (typeof process.getuid !== "function") {
+    Object.defineProperty(process, "getuid", { value: () => 501, configurable: true, writable: true });
+    addedGetuid = true;
+  }
   vi.spyOn(process, "getuid").mockReturnValue(501);
   setPlatform("darwin");
 });
@@ -115,6 +122,10 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  if (addedGetuid) {
+    delete (process as { getuid?: unknown }).getuid;
+    addedGetuid = false;
+  }
   setPlatform(realPlatform);
 });
 
