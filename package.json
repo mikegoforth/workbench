@@ -5,6 +5,9 @@
   "author": "workbench contributors",
   "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "next dev",

@@ -10,8 +10,12 @@ import type { Requirement, RequirementsResult } from "./types";
 
 const run = promisify(execFile);
 
-/** Oldest Node that runs current Next.js and Vite dev servers. Keep in step with the README. */
-export const MIN_NODE = "20.9.0";
+/**
+ * Oldest Node that runs current Next.js and Vite dev servers and is still
+ * supported (Node 20 reached end-of-life in April 2026). Keep in step with the
+ * README, REQUIREMENTS.md and `engines` in package.json.
+ */
+export const MIN_NODE = "22.12.0";
 
 const DOCKER_APPS = ["/Applications/Docker.app", "/Applications/OrbStack.app"];
 

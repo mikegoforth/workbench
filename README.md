@@ -1,7 +1,7 @@
 # workbench
 
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](REQUIREMENTS.md)
-[![Node.js 20.9+](https://img.shields.io/badge/Node.js-%E2%89%A520.9-5FA04E?logo=nodedotjs&logoColor=white)](REQUIREMENTS.md)
+[![Node.js 22.12+](https://img.shields.io/badge/Node.js-%E2%89%A522.12-5FA04E?logo=nodedotjs&logoColor=white)](REQUIREMENTS.md)
 [![Electron](https://img.shields.io/badge/-Electron-47848F?logo=electron&logoColor=white)](docs/development.md#desktop-app)
 [![Next.js](https://img.shields.io/badge/-Next.js-000000?logo=nextdotjs&logoColor=white)](docs/development.md)
 
@@ -30,7 +30,7 @@ It runs entirely on your Mac. There are no accounts and nothing is hosted.
 
 ## Requirements
 
-A Mac (macOS 13 or later) with Node.js 20.9+, Docker Desktop or OrbStack, and Git. The GitHub CLI and VS Code are optional. On first launch, setup checks for each of these and links to anything missing.
+A Mac (macOS 13 or later) with Node.js 22.12+, Docker Desktop or OrbStack, and Git. The GitHub CLI and VS Code are optional. On first launch, setup checks for each of these and links to anything missing.
 
 ## Install
 
