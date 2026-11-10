@@ -11,14 +11,13 @@ import path from "node:path";
 const TIMEOUT_MS = 120_000;
 const release = path.resolve("release");
 
+// The unpacked app for this machine's CPU: electron-builder leaves one per
+// architecture it built (mac and mac-arm64, linux-unpacked and linux-arm64-unpacked).
 function executable() {
-  if (process.platform === "darwin") {
-    const dir = fs.readdirSync(release).find((d) => /^mac/.test(d) && fs.existsSync(path.join(release, d, "workbench.app")));
-    return dir && path.join(release, dir, "workbench.app", "Contents", "MacOS", "workbench");
-  }
-  if (process.platform === "win32") return path.join(release, "win-unpacked", "workbench.exe");
-  const dir = fs.readdirSync(release).find((d) => /^linux.*unpacked$/.test(d));
-  return dir && path.join(release, dir, "workbench");
+  const arm = process.arch === "arm64";
+  if (process.platform === "darwin") return path.join(release, arm ? "mac-arm64" : "mac", "workbench.app", "Contents", "MacOS", "workbench");
+  if (process.platform === "win32") return path.join(release, arm ? "win-arm64-unpacked" : "win-unpacked", "workbench.exe");
+  return path.join(release, arm ? "linux-arm64-unpacked" : "linux-unpacked", "workbench");
 }
 
 // Electron's app.getPath("logs") for an app named "workbench".
@@ -31,7 +30,7 @@ function logFile() {
 // An explicit path (e.g. the copy the Windows installer put in place) wins.
 const exe = process.argv[2] ? path.resolve(process.argv[2]) : executable();
 if (!exe || !fs.existsSync(exe)) {
-  console.error(`No packaged app found in ${release}`);
+  console.error(`No packaged app at ${exe}`);
   process.exit(1);
 }
 const log = logFile();
