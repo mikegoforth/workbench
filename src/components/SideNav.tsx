@@ -7,6 +7,7 @@ import {
   FolderCog,
   FolderGit2,
   GitCommitHorizontal,
+  GitPullRequest,
   LayoutDashboard,
   ListChecks,
   ListTodo,
@@ -36,6 +37,7 @@ export default function SideNav({
   counts,
   counting = false,
   setupIssues = 0,
+  reviewCount,
   collapsed,
   onGo,
   onToggleCollapsed,
@@ -53,6 +55,8 @@ export default function SideNav({
    * required tool goes missing.
    */
   setupIssues?: number;
+  /** Open PRs waiting on your review; undefined until GitHub has answered (or when it can't). */
+  reviewCount?: number;
   collapsed: boolean;
   onGo: (view: View) => void;
   onToggleCollapsed?: () => void;
@@ -71,6 +75,7 @@ export default function SideNav({
       title: "Operations",
       items: [
         { view: "attention", icon: TriangleAlert, count: counts.attention, tone: "warn" },
+        { view: "pulls", icon: GitPullRequest, count: reviewCount, tone: "warn" },
         { view: "activity", icon: GitCommitHorizontal },
         { view: "todos", icon: ListTodo, count: counts.todos, tone: "info" },
       ],

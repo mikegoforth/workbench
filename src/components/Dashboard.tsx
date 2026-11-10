@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, RefreshCw } from "lucide-react";
 import { stripState } from "@/lib/attention";
+import { listCount } from "@/lib/pullRequestRows";
 import { changedCount, openTodoCount, projectStatus } from "@/lib/status";
 import type { ContainerProblem, DockerDaemon, Overview, ProjectInfo, ProjectsDirInfo, RequirementsResult } from "@/lib/types";
 import { useShortcut } from "@/lib/useShortcut";
@@ -16,6 +17,7 @@ import { DETAIL_TABS, VIEW_TITLE, VIEWS, type Actions, type Counts, type Ctx, ty
 import ProjectDetail from "./ProjectDetail";
 import ProjectPicker from "./ProjectPicker";
 import ProjectsFolder from "./ProjectsFolder";
+import PullRequestsView, { loadErrorOf, loadPullRequests, type PullRequestsState } from "./PullRequestsView";
 import Setup from "./Setup";
 import UpdateBanner from "./UpdateBanner";
 import { queryRows, type ChipId, type Sort, type SortKey } from "./projectQuery";
@@ -25,6 +27,8 @@ import SideNav from "./SideNav";
 import TodosView from "./TodosView";
 
 const RUNNING_POLL_MS = 5000;
+// The server caches a minute; this keeps the nav's review count current without hammering GitHub.
+const PULL_REQUESTS_POLL_MS = 3 * 60_000;
 const DOCKER_WAIT_MS = 120_000;
 
 interface RunningPoll {
@@ -108,6 +112,7 @@ export default function Dashboard() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pending, setPending] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [prs, setPrs] = useState<PullRequestsState>({ data: null, error: null, loading: true });
 
   // First scan and the overview; the URL's route applies once the list is known.
   useEffect(() => {
@@ -199,6 +204,32 @@ export default function Dashboard() {
       clearInterval(timer);
     };
   }, [runningCheck]);
+
+  // Open PRs involving you, across GitHub: on load, every few minutes while visible, and on refresh.
+  const prsRequest = useRef(0);
+  const refreshPullRequests = (fresh: boolean) => {
+    const id = ++prsRequest.current;
+    setPrs((s) => ({ ...s, loading: true }));
+    loadPullRequests(fresh)
+      .then((data) => {
+        if (id === prsRequest.current) setPrs({ data, error: null, loading: false });
+      })
+      // Keep what's on screen; the page says it couldn't refresh.
+      .catch((e) => {
+        if (id === prsRequest.current) setPrs((s) => ({ ...s, error: loadErrorOf(e), loading: false }));
+      });
+  };
+  const refreshPullRequestsRef = useRef(refreshPullRequests);
+  useEffect(() => {
+    refreshPullRequestsRef.current = refreshPullRequests;
+  });
+  useEffect(() => {
+    refreshPullRequestsRef.current(false);
+    const timer = setInterval(() => {
+      if (!document.hidden) refreshPullRequestsRef.current(false);
+    }, PULL_REQUESTS_POLL_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   // ---- Derived ----
 
@@ -388,6 +419,7 @@ export default function Dashboard() {
     getJSON<Overview>("/api/overview?fresh=1")
       .then(setOverview)
       .catch(() => {});
+    refreshPullRequests(true);
     setRunningCheck((n) => n + 1);
   };
 
@@ -462,6 +494,7 @@ export default function Dashboard() {
   // missing since, or when opened from Settings → Setup.
   // Tool checks that aren't passing; the Setup nav item only shows when there are some.
   const setupIssues = requirements?.requirements.filter((r) => !r.ok).length ?? 0;
+  const reviewCount = prs.data ? listCount(prs.data.review) : undefined;
   const setupDue =
     requirements !== null &&
     setupCompletedAt !== undefined &&
@@ -587,6 +620,9 @@ export default function Dashboard() {
       case "attention":
         content = <AttentionView ctx={ctx} items={derived.attention} />;
         break;
+      case "pulls":
+        content = <PullRequestsView ctx={ctx} prs={prs} onRefresh={() => refreshPullRequests(true)} />;
+        break;
       case "activity":
         content = <ActivityView ctx={ctx} items={derived.visible} />;
         break;
@@ -616,6 +652,7 @@ export default function Dashboard() {
           counts={derived.counts}
           counting={firstScan}
           setupIssues={setupIssues}
+          reviewCount={reviewCount}
           collapsed={navCollapsed}
           onGo={go}
           onToggleCollapsed={() => setNavCollapsed((c) => !c)}
@@ -623,7 +660,7 @@ export default function Dashboard() {
         {drawerOpen && (
           <div className="fixed inset-x-0 top-14 bottom-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} aria-hidden />
-            <SideNav className="relative h-full shadow-pop" view={route.view} counts={derived.counts} counting={firstScan} setupIssues={setupIssues} collapsed={false} onGo={go} />
+            <SideNav className="relative h-full shadow-pop" view={route.view} counts={derived.counts} counting={firstScan} setupIssues={setupIssues} reviewCount={reviewCount} collapsed={false} onGo={go} />
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
