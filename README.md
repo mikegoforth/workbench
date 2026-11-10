@@ -17,13 +17,13 @@ and pick up where you left off, without opening GitHub, a terminal, or each repo
 [![Linux](https://img.shields.io/badge/--24292f?logo=linux&logoColor=white "Linux (x64, arm64)")](#linux)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[**Download**](https://github.com/mikegoforth/workbench/releases/latest) · [Features](#features) · [Install](#install) · [Requirements](#requirements) · [Docs](docs/usage.md)
+[**Download**](https://github.com/mikegoforth/workbench/releases/latest) · [Features](#features) · [Security](#security) · [Install](#install) · [Requirements](#requirements) · [Docs](docs/usage.md)
 
 </div>
 
 <!--
-  OpenSSF Scorecard badge, once the ossf/scorecard-action workflow runs with
-  publish_results: true:
+  OpenSSF Scorecard badge. .github/workflows/scorecard.yml publishes the score;
+  add the badge once it's above 7 (5.9 at 621ae89, before the fixes in #25):
   [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/mikegoforth/workbench/badge)](https://scorecard.dev/viewer/?uri=github.com/mikegoforth/workbench)
 -->
 
@@ -37,8 +37,20 @@ workbench reads the real state of every project on your machine: git status, run
 - **Hand off fast.** Open a project in VS Code, Terminal or GitHub, or pull its latest changes, without leaving the dashboard.
 - **Stay current.** See the version you're on and what changed in each release, and get told when a new one is out.
 
-> [!NOTE]
-> **Private by design.** workbench runs entirely on your computer. No accounts, no telemetry, nothing hosted. It reaches the network only through your own tools (`git` for your remotes, the `gh` CLI for GitHub) and to check GitHub for new releases.
+## Security
+
+workbench runs git, npm scripts and Docker on your computer, so it's built so that only you can drive it.
+
+- **Private by design.** It runs entirely on your computer: no accounts, no telemetry, nothing hosted. It reaches the network only through your own tools (`git` for your remotes, the `gh` CLI for GitHub) and to check GitHub for new releases.
+- **Only reachable from your computer.** The desktop app's server listens on `127.0.0.1` only, and refuses requests from websites trying to reach it.
+- **Only its own window.** Each launch makes a new secret that every request must carry, so other programs on your computer can't use the app.
+- **Can't be pointed elsewhere.** It only works in folders inside your projects folder, and runs commands with fixed arguments, never a shell command built from a request. On every change, tests run thousands of generated paths at these checks and fail if any gets outside.
+- **Checks itself at launch.** The app won't run server files that changed since they were built, and turns off the switches that would let another program run code inside it.
+- **Downloads you can verify.** Every release file has a SHA-256 and a signed record that this repo's release workflow built it. See **Verify your download** under [Install](#install).
+
+**How it's built.** CI has to pass before anything merges. Workflows can use only GitHub's own actions and OpenSSF Scorecard's, each pinned to an exact commit, with read-only tokens by default. Every change is scanned by CodeQL and `npm audit`, Dependabot sends security updates, and secret scanning blocks pushed credentials.
+
+Details, and how to report a vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Install
 
