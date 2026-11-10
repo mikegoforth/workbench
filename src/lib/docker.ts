@@ -496,7 +496,9 @@ export const publicStack = (s: StackDetail): ComposeStack => ({
 const LOG_TAIL = 300;
 const MAX_LINES = 2000;
 const MAX_CONTAINERS = 12;
-const TS_LINE = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z) ?(.*)$/;
+// [^\n], not ".": "." stops at \r, which would drop every line from a tty
+// container (CRLF endings) and every progress-bar redraw.
+const TS_LINE = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z) ?([^\n]*)$/;
 const SINCE = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/;
 
 function parseLog(text: string, c: Container, stream: "out" | "err", into: ContainerLogLine[]) {

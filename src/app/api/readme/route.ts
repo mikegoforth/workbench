@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
 import { rejectNonLocal } from "@/lib/guard";
 import { resolveProjectDir } from "@/lib/paths";
-import { findReadme } from "@/lib/files";
+import { findReadme, resolveFileIn } from "@/lib/files";
 
 const MAX_BYTES = 256 * 1024;
 
@@ -15,9 +14,12 @@ export async function GET(request: NextRequest) {
   const dir = resolveProjectDir(request.nextUrl.searchParams.get("project"));
   if (!dir) return NextResponse.json({ error: "Project not found" }, { status: 404 });
   const file = findReadme(dir);
-  if (!file) return NextResponse.json({ error: "No README" }, { status: 404 });
+  // Same containment as /api/file: a cloned repo could ship
+  // README.md -> ~/.ssh/id_ed25519, or a folder named README.
+  const full = file ? resolveFileIn(dir, file) : null;
+  if (!file || !full) return NextResponse.json({ error: "No README" }, { status: 404 });
 
-  const buf = fs.readFileSync(path.join(dir, file));
+  const buf = fs.readFileSync(full);
   return NextResponse.json({
     file,
     content: buf.subarray(0, MAX_BYTES).toString("utf-8"),
