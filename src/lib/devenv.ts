@@ -1,4 +1,5 @@
 import { execFile, spawn } from "child_process";
+import { createHash } from "crypto";
 import { promisify } from "util";
 import fs from "fs";
 import path from "path";
@@ -107,6 +108,8 @@ interface RunState {
   /** For kind "script": which package.json script. */
   script?: string;
   url?: string;
+  /** The project's name, for state files named by a hash of it (see fileStem). */
+  project?: string;
 }
 
 // ---- Detection -------------------------------------------------------------
@@ -165,29 +168,39 @@ function planSteps(plan: Plan): string[] {
 
 // dev slot: data/dev/<name>.{json,log}; script slot: data/dev/scripts/<name>.{json,log}
 const slotDir = (slot: Slot) => (slot === "dev" ? devDir() : path.join(devDir(), "scripts"));
-const SAFE_PROJECT_NAME = /^[A-Za-z0-9._-]{1,128}$/;
+// Most project names are file-safe as they are, and keep the file names they had
+// before. Any other name (a space, an accent, other punctuation) is stored under
+// a hash of it, and its state file records the real name. Project names never
+// start with "." (resolveProjectDir), so a ".h…" stem can't collide with one.
+const PLAIN_NAME = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,127}$/;
+const FILE_STEM = /^\.?[A-Za-z0-9._-]{1,128}$/;
 
-function safeProjectFileStem(name: string): string {
-  if (!SAFE_PROJECT_NAME.test(name)) {
-    throw new DevError(400, "Invalid project name");
-  }
-  return name;
+function fileStem(name: string): string {
+  return PLAIN_NAME.test(name) ? name : `.h${createHash("sha256").update(name).digest("hex").slice(0, 32)}`;
 }
 
-const statePath = (name: string, slot: Slot) => path.join(slotDir(slot), `${safeProjectFileStem(name)}.json`);
-const logPath = (name: string, slot: Slot) => path.join(slotDir(slot), `${safeProjectFileStem(name)}.log`);
+/** The path for a stem, checked so nothing but a plain file name reaches the file system. */
+function stemPath(stem: string, slot: Slot, ext: "json" | "log"): string {
+  if (!FILE_STEM.test(stem)) throw new DevError(400, "Invalid project name");
+  return path.join(slotDir(slot), `${stem}.${ext}`);
+}
 
-function readState(name: string, slot: Slot): RunState | null {
+const statePath = (name: string, slot: Slot) => stemPath(fileStem(name), slot, "json");
+const logPath = (name: string, slot: Slot) => stemPath(fileStem(name), slot, "log");
+
+function readStateFile(stem: string, slot: Slot): RunState | null {
   try {
-    return JSON.parse(fs.readFileSync(statePath(name, slot), "utf-8"));
+    return JSON.parse(fs.readFileSync(stemPath(stem, slot, "json"), "utf-8"));
   } catch {
     return null;
   }
 }
 
+const readState = (name: string, slot: Slot) => readStateFile(fileStem(name), slot);
+
 function writeState(name: string, slot: Slot, state: RunState) {
   fs.mkdirSync(slotDir(slot), { recursive: true });
-  fs.writeFileSync(statePath(name, slot), JSON.stringify(state, null, 2));
+  fs.writeFileSync(statePath(name, slot), JSON.stringify({ ...state, project: name }, null, 2));
 }
 
 function clearState(name: string, slot: Slot) {
@@ -742,9 +755,9 @@ export async function runningProjects(): Promise<{
       continue;
     }
     for (const file of files) {
-      const name = file.slice(0, -".json".length);
-      const state = readState(name, slot);
-      if (state?.pid && state.lstart) states.push({ name, state });
+      const stem = file.slice(0, -".json".length);
+      const state = readStateFile(stem, slot);
+      if (state?.pid && state.lstart) states.push({ name: state.project ?? stem, state });
     }
   }
   if (states.length > 0 && platform() === "linux") {

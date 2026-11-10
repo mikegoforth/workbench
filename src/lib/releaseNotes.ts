@@ -21,6 +21,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.1.3",
+    date: "2026-11-09",
+    changes: [
+      {
+        kind: "security",
+        text: "Hardened how workbench names the files that track your running dev servers and scripts, so they always stay inside its own data folder.",
+      },
+    ],
+  },
+  {
     version: "0.1.2",
     date: "2026-11-09",
     changes: [
