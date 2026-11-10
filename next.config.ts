@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
+import packageJson from "./package.json";
 
 const nextConfig: NextConfig = {
+  // The version shown in What's new; inlined into the page at build time.
+  env: { WORKBENCH_VERSION: packageJson.version },
   // A self-contained server (.next/standalone/server.js) that the desktop app runs. `next dev` is unaffected.
   output: "standalone",
   // The server reads other repos' .git folders and the data folder at paths only known at
