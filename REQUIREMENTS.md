@@ -2,7 +2,7 @@
 
 Everything workbench depends on, at what version, and where security fixes for each are announced. Update this file whenever one of these versions changes.
 
-Last reviewed: 2026-11-09, for workbench 0.1.3.
+Last reviewed: 2026-11-10, for workbench 0.1.4.
 
 ## On the user's computer
 
