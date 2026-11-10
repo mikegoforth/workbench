@@ -12,7 +12,6 @@
 | `npm run test:coverage` | Tests plus a coverage report in `coverage/` (open `coverage/index.html`). Fails if coverage drops below the floor in `vitest.config.mts` |
 | `npm run desktop` | Build the desktop app's pieces and open it with Electron (no packaging) |
 | `npm run desktop:dist` | Package `workbench.app`, a `.dmg` and an update `.zip` into `release/` |
-| `npm run desktop:release` | Package and publish a GitHub release (normally done by CI) |
 
 `next dev` listens on every network interface. The API refuses requests that don't come from localhost, but to keep the whole app on this computer, run `npm run dev -- -H localhost`. `npm run dev` has no per-launch API token (see [SECURITY.md](../SECURITY.md)), so prefer the desktop app for everyday use.
 

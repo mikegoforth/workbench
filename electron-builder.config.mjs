@@ -1,6 +1,7 @@
-// electron-builder config for the desktop app: macOS (dmg + zip) and Linux
-// (AppImage). Builds for the current OS by default; the release workflow
-// builds both on macOS (`--mac --linux`).
+// electron-builder config for the desktop app: macOS (dmg + zip), Linux
+// (AppImage) and Windows (NSIS installer). Builds for the current OS by
+// default; the release workflow builds macOS and Linux on a macOS runner and
+// Windows on a Windows runner.
 //
 // macOS signing: with a "Developer ID Application" certificate (in the keychain, or
 // CSC_LINK + CSC_KEY_PASSWORD in CI) the app is signed with the hardened
@@ -107,6 +108,21 @@ const config = {
   // unversioned libz.so, which stock Ubuntu 24.04 and other current distros
   // don't have, so the AppImage wouldn't even start there.
   toolsets: { appimage: "1.0.3" },
+  // Windows: an x64 installer, built on a Windows runner (Windows on ARM runs
+  // it through its x64 emulation; listing both CPUs would bundle both into one
+  // larger installer). Unsigned for now: SmartScreen warns on first install
+  // ("More info" → "Run anyway"); updates install themselves either way. A
+  // certificate in CSC_LINK / WIN_CSC_LINK signs it.
+  win: {
+    target: [{ target: "nsis", arch: ["x64"] }],
+  },
+  nsis: {
+    // Per-user install: no admin prompt, and updates never need one either.
+    oneClick: true,
+    perMachine: false,
+    artifactName: "${productName}-${version}-${arch}-setup.${ext}",
+    shortcutName: "workbench",
+  },
   dmg: {
     // Name both by chip (arm64, x64): by default the Intel one has no suffix,
     // which is easy to mistake for the only download. The zips keep the
@@ -118,8 +134,8 @@ const config = {
   // (see docs/development.md, "Updates and releases"). null: no feed, and updates are off.
   publish:
     releasesOwner && releasesRepo
-      ? // A draft: the release workflow attaches checksums and provenance, then
-        // publishes it. (The app's update check doesn't read this setting.)
+      ? // Builds run with --publish never: this only writes the update feed (app-update.yml
+        // in the app, latest*.yml beside it). The release workflow creates the release.
         { provider: "github", owner: releasesOwner, repo: releasesRepo, releaseType: "draft" }
       : null,
 };

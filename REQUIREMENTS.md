@@ -77,5 +77,5 @@ npm outdated electron electron-updater next react react-dom
 1. Update the package, keeping exact versions for Electron and its tooling, e.g. `npm install --save-exact electron@45.x.y`.
 2. Raise `version` in `package.json`. Installed apps only offer an update when the version is higher.
 3. `npm run desktop:dist`, then open `release/mac-arm64/workbench.app` (on Linux, `release/workbench-<version>-<arch>.AppImage`) and check it starts and lists projects.
-4. Publish the release (`npm run desktop:release`, or the release workflow). Installed apps check at launch and every 4 hours.
+4. Merge the release PR and push its tag; the release workflow builds and publishes every platform. Installed apps check at launch and every 4 hours.
 5. Update the versions in this file.
