@@ -4,7 +4,7 @@
 
 # workbench
 
-**A control panel for every coding project on your Mac.**
+**A control panel for every coding project on your Mac or Linux machine.**
 
 See what needs attention across all your repos, start and stop dev environments,<br>
 and pick up where you left off, without opening GitHub, a terminal, or each repo by hand.
@@ -12,7 +12,7 @@ and pick up where you left off, without opening GitHub, a terminal, or each repo
 [![Latest release](https://img.shields.io/github/v/release/mikegoforth/workbench?label=release)](https://github.com/mikegoforth/workbench/releases/latest)
 [![CI](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikegoforth%2Fworkbench%2Fbadges%2Fcoverage.json)](docs/development.md#commands)
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](#requirements)
+[![Platforms: macOS 13+ and Linux](https://img.shields.io/badge/platforms-macOS%2013%2B%20%7C%20Linux-24292f)](#requirements)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 [**Download**](https://github.com/mikegoforth/workbench/releases/latest) · [Features](#features) · [Install](#install) · [Requirements](#requirements) · [Docs](docs/usage.md)
@@ -36,9 +36,11 @@ workbench reads the real state of every project on your machine: git status, run
 - **Stay current.** See the version you're on and what changed in each release, and get told when a new one is out.
 
 > [!NOTE]
-> **Private by design.** workbench runs entirely on your Mac. No accounts, no telemetry, nothing hosted. It reaches the network only through your own tools (`git` for your remotes, the `gh` CLI for GitHub) and to check GitHub for new releases.
+> **Private by design.** workbench runs entirely on your computer. No accounts, no telemetry, nothing hosted. It reaches the network only through your own tools (`git` for your remotes, the `gh` CLI for GitHub) and to check GitHub for new releases.
 
 ## Install
+
+### macOS
 
 1. Download the `.dmg` for your Mac from the [latest release](https://github.com/mikegoforth/workbench/releases/latest):
 
@@ -54,6 +56,31 @@ workbench reads the real state of every project on your machine: git status, run
 > The app isn't notarized by Apple yet, so macOS blocks it the first time you open it. Go to **System Settings → Privacy & Security** and click **Open Anyway**. You only need to do this once.
 
 When a new version comes out, workbench shows a banner with a link to download it.
+
+### Linux
+
+Available from version 0.1.2.
+
+1. Download the AppImage for your computer from the [latest release](https://github.com/mikegoforth/workbench/releases/latest):
+
+   | Your computer | File |
+   | --- | --- |
+   | Intel or AMD (64-bit) | `workbench-<version>-x86_64.AppImage` |
+   | ARM (64-bit) | `workbench-<version>-arm64.AppImage` |
+
+2. Make it executable and open it:
+
+   ```bash
+   chmod +x workbench-*.AppImage
+   ./workbench-*.AppImage
+   ```
+
+3. Setup checks your tools and asks for your projects folder.
+
+The AppImage installs its own updates: when one is ready, workbench offers to restart. Keep it somewhere permanent, such as `~/Applications`.
+
+> [!TIP]
+> AppImages mount themselves with FUSE, which most desktop distributions include. Without it, run with `APPIMAGE_EXTRACT_AND_RUN=1` set.
 
 <details>
 <summary><b>Verify your download</b></summary>
@@ -72,12 +99,12 @@ Each release also lists every file's SHA-256 in `SHA256SUMS`.
 
 ## Requirements
 
-A Mac running **macOS 13 (Ventura) or later**, with:
+A Mac running **macOS 13 (Ventura) or later**, or a 64-bit **Linux** desktop (Intel/AMD or ARM), with:
 
 | Tool | Used for | Needed |
 | --- | --- | --- |
 | [Node.js](https://nodejs.org/en/download) 22.12+ | Installing dependencies and running your projects' dev servers | Required |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev) | Projects with a compose file | Required |
+| Docker: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev) on macOS; [Docker Engine](https://docs.docker.com/engine/install/) or Docker Desktop on Linux | Projects with a compose file | Required |
 | [Git](https://git-scm.com/downloads) | Branches, changes and history for every project | Required |
 | [GitHub CLI](https://cli.github.com), signed in | CI status, pull requests and review requests | Optional |
 | [VS Code](https://code.visualstudio.com) | Opening projects and changed files | Optional |
@@ -94,7 +121,7 @@ npm run dev            # http://localhost:3000
 Or build the desktop app:
 
 ```bash
-npm run desktop:dist   # workbench.app, .dmg and .zip in release/
+npm run desktop:dist   # for the system you're on: .dmg and .zip (macOS) or AppImages (Linux) in release/
 ```
 
 ## Documentation
