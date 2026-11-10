@@ -1,14 +1,23 @@
+<div align="center">
+
+<img src="docs/assets/logo.svg" width="64" height="64" alt="">
+
 # workbench
 
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](REQUIREMENTS.md)
-[![Node.js 22.12+](https://img.shields.io/badge/Node.js-%E2%89%A522.12-5FA04E?logo=nodedotjs&logoColor=white)](REQUIREMENTS.md)
-[![Electron](https://img.shields.io/badge/-Electron-47848F?logo=electron&logoColor=white)](docs/development.md#desktop-app)
-[![Next.js](https://img.shields.io/badge/-Next.js-000000?logo=nextdotjs&logoColor=white)](docs/development.md)
+**A control panel for every coding project on your Mac.**
 
-[![Latest release](https://img.shields.io/github/v/release/mikegoforth/workbench)](https://github.com/mikegoforth/workbench/releases/latest)
+See what needs attention across all your repos, start and stop dev environments,<br>
+and pick up where you left off, without opening GitHub, a terminal, or each repo by hand.
+
+[![Latest release](https://img.shields.io/github/v/release/mikegoforth/workbench?label=release)](https://github.com/mikegoforth/workbench/releases/latest)
 [![CI](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikegoforth%2Fworkbench%2Fbadges%2Fcoverage.json)](docs/development.md#commands)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](#requirements)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+[**Download**](https://github.com/mikegoforth/workbench/releases/latest) · [Features](#features) · [Install](#install) · [Requirements](#requirements) · [Docs](docs/usage.md)
+
+</div>
 
 <!--
   OpenSSF Scorecard badge, once the ossf/scorecard-action workflow runs with
@@ -16,32 +25,42 @@
   [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/mikegoforth/workbench/badge)](https://scorecard.dev/viewer/?uri=github.com/mikegoforth/workbench)
 -->
 
-A control panel for every coding project on your Mac.
+## Features
 
-workbench shows the real state of each project in one place: git status, running dev servers and containers, GitHub CI and pull requests, notes and todos. You can act on it from there: start and stop dev environments, run scripts, pull, read logs, and open a project in VS Code or Terminal.
+workbench reads the real state of every project on your machine: git status, running dev servers and containers, GitHub CI and pull requests, notes and todos. You act on it from the same place.
 
-It runs entirely on your Mac. There are no accounts and nothing is hosted.
+- **See what needs attention.** Failing CI, pull requests waiting on you, uncommitted or unpushed work, branches behind their remote, and crashed containers, across every repo at once.
+- **Start and stop projects.** One click brings up a project's compose stack and dev script, and stops them again. Run any `package.json` script and watch its output.
+- **Pick up where you left off.** Notes, todos, changed files and branch state for each project, all on one page.
+- **Hand off fast.** Open a project in VS Code, Terminal or GitHub, or pull its latest changes, without leaving the dashboard.
+- **Stay current.** See the version you're on and what changed in each release, and get told when a new one is out.
 
-## What it does
-
-- **Shows what needs attention**: failing CI, pull requests waiting on you, uncommitted or unpushed work, branches behind, and crashed containers.
-- **Starts and stops projects**: one click runs a project's compose stack and dev script, and stops them again.
-- **Helps you pick up where you left off**: notes, todos, changed files and branch state for each project.
-- **Hands off fast**: opens a project in VS Code, Terminal or GitHub.
-
-## Requirements
-
-A Mac (macOS 13 or later) with Node.js 22.12+, Docker Desktop or OrbStack, and Git. The GitHub CLI and VS Code are optional. On first launch, setup checks for each of these and links to anything missing.
+> [!NOTE]
+> **Private by design.** workbench runs entirely on your Mac. No accounts, no telemetry, nothing hosted. It reaches the network only through your own tools (`git` for your remotes, the `gh` CLI for GitHub) and to check GitHub for new releases.
 
 ## Install
 
-Download the `.dmg` for your Mac from the [latest release](https://github.com/mikegoforth/workbench/releases/latest): `arm64` for Apple silicon (M1 and later), `x64` for Intel. Open it and drag workbench to Applications.
+1. Download the `.dmg` for your Mac from the [latest release](https://github.com/mikegoforth/workbench/releases/latest):
 
-The app isn't notarized by Apple yet, so macOS blocks it the first time you open it. Go to **System Settings → Privacy & Security** and click **Open Anyway**. You only need to do this once.
+   | Your Mac | File |
+   | --- | --- |
+   | Apple silicon (M1 and later) | `workbench-<version>-arm64.dmg` |
+   | Intel | `workbench-<version>-x64.dmg` |
+
+2. Open it and drag **workbench** to **Applications**.
+3. Open workbench. Setup checks your tools and asks for your projects folder; every folder directly inside it becomes a project.
+
+> [!IMPORTANT]
+> The app isn't notarized by Apple yet, so macOS blocks it the first time you open it. Go to **System Settings → Privacy & Security** and click **Open Anyway**. You only need to do this once.
 
 When a new version comes out, workbench shows a banner with a link to download it.
 
-To check a download was built from this repo by its release workflow, use the [GitHub CLI](https://cli.github.com):
+<details>
+<summary><b>Verify your download</b></summary>
+
+<br>
+
+Every release file comes with a signed record that it was built from this repo by its release workflow. Check it with the [GitHub CLI](https://cli.github.com):
 
 ```bash
 gh attestation verify workbench-<version>-arm64.dmg --repo mikegoforth/workbench
@@ -49,11 +68,27 @@ gh attestation verify workbench-<version>-arm64.dmg --repo mikegoforth/workbench
 
 Each release also lists every file's SHA-256 in `SHA256SUMS`.
 
+</details>
+
+## Requirements
+
+A Mac running **macOS 13 (Ventura) or later**, with:
+
+| Tool | Used for | Needed |
+| --- | --- | --- |
+| [Node.js](https://nodejs.org/en/download) 22.12+ | Installing dependencies and running your projects' dev servers | Required |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev) | Projects with a compose file | Required |
+| [Git](https://git-scm.com/downloads) | Branches, changes and history for every project | Required |
+| [GitHub CLI](https://cli.github.com), signed in | CI status, pull requests and review requests | Optional |
+| [VS Code](https://code.visualstudio.com) | Opening projects and changed files | Optional |
+
+On first launch, setup checks for each one and links to anything missing. [REQUIREMENTS.md](REQUIREMENTS.md) lists every dependency and where its security fixes are announced.
+
 ## Run from source
 
 ```bash
 npm install
-npm run dev            # open http://localhost:3000
+npm run dev            # http://localhost:3000
 ```
 
 Or build the desktop app:
@@ -62,11 +97,15 @@ Or build the desktop app:
 npm run desktop:dist   # workbench.app, .dmg and .zip in release/
 ```
 
-Setup asks for your projects folder. Every folder directly inside it shows up as a project.
+## Documentation
 
-## Learn more
+| Guide | What's in it |
+| --- | --- |
+| [Using workbench](docs/usage.md) | Features, keyboard shortcuts, the projects folder, and where data is stored |
+| [Development](docs/development.md) | Commands, tests, the desktop app, releasing and signing, and the code layout |
+| [Requirements](REQUIREMENTS.md) | Dependencies and where their security fixes are announced |
+| [Security](SECURITY.md) | How workbench protects your machine, and how to report a vulnerability |
 
-- [Using workbench](docs/usage.md): features, keyboard shortcuts, the projects folder, and where data is stored
-- [Development](docs/development.md): commands, the desktop app, releasing and signing, and the code layout
-- [Requirements](REQUIREMENTS.md): dependencies and where their security fixes are announced
-- [Security](SECURITY.md): how workbench protects your machine, and how to report a vulnerability
+## License
+
+[MIT](LICENSE)
