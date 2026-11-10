@@ -25,7 +25,7 @@ export const RELEASES: Release[] = [
     changes: [
       {
         kind: "new",
-        text: "workbench runs on Linux. Download the AppImage for your computer, make it executable and open it; it installs its own updates.",
+        text: "workbench runs on Windows and Linux. On Windows, run the installer; on Linux, make the AppImage executable and open it. Both install their own updates.",
       },
       {
         kind: "new",
@@ -43,7 +43,7 @@ export const RELEASES: Release[] = [
     changes: [
       {
         kind: "security",
-        text: "The README tab won't open a file outside the project. A cloned repo could make its README a link to a private file on your Mac, such as an SSH key.",
+        text: "The README tab won't open a file outside the project. A cloned repo could make its README a link to a private file on your computer, such as an SSH key.",
       },
       {
         kind: "fixed",

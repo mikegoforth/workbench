@@ -20,7 +20,7 @@
 The desktop app is an Electron shell around the same Next.js app. At launch it:
 
 1. Reads `PATH` from your login shell, activating nvm's default Node if you use nvm. (Apps opened from Finder, the Dock or a Linux app launcher get a minimal `PATH`.)
-2. Copies its server to its data folder (`~/Library/Application Support/workbench/server/` on macOS, `~/.config/workbench/server/` on Linux) and checks every file against SHA-256s recorded at build time, so it never runs edited code and never writes inside the signed app.
+2. Copies its server to its data folder (`~/Library/Application Support/workbench/server/` on macOS, `~/.config/workbench/server/` on Linux, `%APPDATA%\workbench\server\` on Windows) and checks every file against SHA-256s recorded at build time, so it never runs edited code and never writes inside the signed app.
 3. Starts the Next.js server on a free port on `127.0.0.1` only, with a secret token for this launch.
 4. Opens a window on it. Links to GitHub and elsewhere open in your browser.
 

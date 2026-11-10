@@ -8,7 +8,7 @@ web
 
 ## Users
 
-One person: a developer using it on their own Mac or Linux machine, as a desktop app or at http://localhost:3000. No accounts, no team, no hosting. They work across dozens of folders in one projects folder: work and personal repos, most of them Node/Next.js, some Go, Expo or compose-only.
+One person: a developer using it on their own computer (macOS, Windows or Linux), as a desktop app or at http://localhost:3000. No accounts, no team, no hosting. They work across dozens of folders in one projects folder: work and personal repos, most of them Node/Next.js, some Go, Expo or compose-only.
 
 ## Product Purpose
 
@@ -25,7 +25,7 @@ It reads the actual machine: the real git state of every folder, the processes a
 
 ## Operating Context
 
-- Runs on the same machine it inspects (macOS or Linux): as a desktop app (Electron around the Next.js server), or as a Next.js dev server (`npm run dev`) reached at localhost in a browser.
+- Runs on the same machine it inspects (macOS, Windows or Linux): as a desktop app (Electron around the Next.js server), or as a Next.js dev server (`npm run dev`) reached at localhost in a browser.
 - Used alongside VS Code, a terminal (Terminal.app on macOS), Docker and GitHub; workbench hands off to them rather than replacing them.
 - Sessions alternate between a quick scan of all projects and long focused work in one, often leaving dev servers or containers running between visits.
 
@@ -35,10 +35,10 @@ It reads the actual machine: the real git state of every folder, the processes a
 - Pages: Dashboard, Projects (table with filter chips: uncommitted, behind, unpushed, failing, todos), Dev servers, Needs attention, Activity, Todos, Hidden projects; search with ⌘K or /. Projects can be hidden or parked; Dev servers always shows running projects even if hidden.
 - Per project: notes and todos (stored in gitignored `data/`), setup checks (dependencies, env vars vs `.env.example` by name only, `.nvmrc` vs Node on PATH, compose file validity), dev environment Start/Stop (compose then dev script), dependency install, package.json script runner with live output, changed files (open in VS Code), fetch / fast-forward-only pull, history (commits, branches, stashes), GitHub status (CI, PRs, issues), README preview, open in VS Code / Terminal / GitHub.
 - Docker: compose stacks found in the project folder, its subfolders, and from container labels (so stacks started outside workbench count); per-stack Start/Stop/Restart; container health, crash loops and error exits raised in Needs attention; merged container logs; Docker Desktop status with a Start button.
-- Keyboard: ⌘K (Ctrl K on Linux) or / to search; ↑/↓ or j/k to move through projects, Enter to open, Esc to go back; O, G, T, S for VS Code, GitHub, Terminal, Start.
+- Keyboard: ⌘K (Ctrl K on Windows and Linux) or / to search; ↑/↓ or j/k to move through projects, Enter to open, Esc to go back; O, G, T, S for VS Code, GitHub, Terminal, Start.
 - Command-running API routes accept only loopback hosts and JSON requests; the dev server itself listens on all interfaces.
 - Must offer light and dark themes with a toggle (owner's request).
-- macOS and Linux (Windows planned); Open in Terminal uses Terminal.app on macOS and the first terminal found on Linux. GitHub data requires `gh auth login`.
+- macOS, Windows and Linux; Open in Terminal uses Terminal.app on macOS, Windows Terminal (or Command Prompt) on Windows, and the first terminal found on Linux. GitHub data requires `gh auth login`.
 
 ## Brand Commitments
 
