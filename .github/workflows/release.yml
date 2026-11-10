@@ -1,5 +1,5 @@
-# Builds the macOS app and publishes it as a GitHub release when a version tag is pushed:
-#   npm version patch && git push --follow-tags
+# Builds the macOS and Linux apps and publishes them as a GitHub release when a version tag is pushed:
+#   after the release PR merges: git tag v<version> && git push origin v<version>
 #
 # The release is built as a draft, gets SHA256SUMS and (in a public repo) a
 # signed build-provenance attestation per file, and is published last. So a
@@ -85,7 +85,7 @@ jobs:
       - name: Attach SHA256SUMS to the draft
         working-directory: release
         run: |
-          shasum -a 256 *.dmg *.zip > SHA256SUMS
+          shasum -a 256 *.dmg *.zip *.AppImage > SHA256SUMS
           cat SHA256SUMS
           gh release upload "$GITHUB_REF_NAME" SHA256SUMS --clobber --repo "$RELEASES_OWNER/$RELEASES_REPO"
         env:
@@ -100,6 +100,7 @@ jobs:
           subject-path: |
             release/*.dmg
             release/*.zip
+            release/*.AppImage
 
       # Last, so nothing above can change a published release. With immutable
       # releases on, this locks the release's files and tag.
