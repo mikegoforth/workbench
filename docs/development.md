@@ -8,6 +8,8 @@
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Generate Next's route types, then run TypeScript |
+| `npm test` | Unit tests (Vitest). `npm run test:watch` reruns them as you edit |
+| `npm run test:coverage` | Tests plus a coverage report in `coverage/` (open `coverage/index.html`). Fails if coverage drops below the floor in `vitest.config.mts` |
 | `npm run desktop` | Build the desktop app's pieces and open it with Electron (no packaging) |
 | `npm run desktop:dist` | Package `workbench.app`, a `.dmg` and an update `.zip` into `release/` |
 | `npm run desktop:release` | Package and publish a GitHub release (normally done by CI) |

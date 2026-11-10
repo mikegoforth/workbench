@@ -288,7 +288,7 @@ export interface Requirement {
   name: string;
   /** Nice to have: missing it never blocks setup. */
   optional?: boolean;
-  /** What counts as installed, e.g. "20.9 or later". */
+  /** What counts as installed, e.g. "22.12 or later". */
   need: string;
   ok: boolean;
   /** Installed version, if any. */

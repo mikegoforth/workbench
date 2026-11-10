@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Desktop app build output (bundled main/preload scripts, packaged apps).
     "dist-electron/**",
     "release/**",
+    // Coverage report (npm run test:coverage).
+    "coverage/**",
   ]),
 ]);
 

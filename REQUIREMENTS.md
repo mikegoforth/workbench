@@ -11,7 +11,7 @@ Setup's first step checks these and links to downloads for anything missing ([sr
 | Tool | Needed for | Minimum | Required |
 | --- | --- | --- | --- |
 | macOS | Running the app | 13 (Ventura), Electron 45's minimum | Yes |
-| Node.js | Installing dependencies and running projects' dev servers. Also running workbench from source (`npm run dev`) | 20.9 (`MIN_NODE` in `requirements.ts`) | Yes |
+| Node.js | Installing dependencies and running projects' dev servers. Also running workbench from source (`npm run dev`) | 22.12 (`MIN_NODE` in `requirements.ts`, `engines` in `package.json`). Node 20 is end-of-life | Yes |
 | Docker Desktop or OrbStack | Projects with a compose file | Any | Yes |
 | Git | Reading every project's branch, changes and history | Any recent | Yes |
 | GitHub CLI (`gh`), signed in | CI status, pull requests, review requests | Any | Optional |
