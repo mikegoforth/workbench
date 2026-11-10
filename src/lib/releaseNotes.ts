@@ -35,6 +35,18 @@ export const RELEASES: Release[] = [
         kind: "changed",
         text: "A roomier, calmer layout: more space around cards and rows, softer corners, and a lighter top bar and sidebar.",
       },
+      {
+        kind: "changed",
+        text: "A project's page now opens with where you left off (branch, uncommitted work, last commit, stashes), then what needs attention and how to run it. Start and Stop live in one place, at the top, and Start warns you when a setup issue may stop it.",
+      },
+      {
+        kind: "new",
+        text: "Changed files are grouped (conflicts first) with a filter, common scripts come first with a search box, and [ and ] switch between a project's tabs.",
+      },
+      {
+        kind: "fixed",
+        text: "A project page no longer says \"In sync\" before it has fetched, shows a Checks link without checks, or calls a project with uncommitted work \"All clear\". Counts show a dash, not 0, while the first scan runs.",
+      },
     ],
   },
   {

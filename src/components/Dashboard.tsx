@@ -112,6 +112,8 @@ export default function Dashboard() {
   // First scan and the overview; the URL's route applies once the list is known.
   useEffect(() => {
     let cancelled = false;
+    // Show where the URL points while the first scan runs (it's checked once the list is known).
+    setRoute(readRoute());
     getJSON<ProjectInfo[]>("/api/projects")
       .then((data) => {
         if (cancelled) return;
@@ -443,6 +445,8 @@ export default function Dashboard() {
   const ctx: Ctx = { items, overview, ports, pending, errors, scannedAt, scanning: loading, projectsDir: folderLabel, docker, dockerStarting, actions };
   // Wait for the requirements too, so a missing one never flashes the dashboard first.
   const initialLoad = (loading && projects.length === 0) || !requirements || setupCompletedAt === undefined;
+  // Until the first scan finishes, counts would read 0: show them as unknown instead.
+  const firstScan = loading && !scannedAt;
 
   const onSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "updated" || key === "changes" ? "desc" : "asc" }));
@@ -608,6 +612,7 @@ export default function Dashboard() {
           className="hidden lg:flex"
           view={route.view}
           counts={derived.counts}
+          counting={firstScan}
           collapsed={navCollapsed}
           onGo={go}
           onToggleCollapsed={() => setNavCollapsed((c) => !c)}
@@ -615,7 +620,7 @@ export default function Dashboard() {
         {drawerOpen && (
           <div className="fixed inset-x-0 top-14 bottom-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} aria-hidden />
-            <SideNav className="relative h-full shadow-pop" view={route.view} counts={derived.counts} collapsed={false} onGo={go} />
+            <SideNav className="relative h-full shadow-pop" view={route.view} counts={derived.counts} counting={firstScan} collapsed={false} onGo={go} />
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">

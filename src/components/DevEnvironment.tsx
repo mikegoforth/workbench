@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { LoaderCircle, Play, Square } from "lucide-react";
+import { LoaderCircle, Play, Square, TriangleAlert } from "lucide-react";
 import { timeAgo } from "@/lib/format";
 import type { Tone } from "@/lib/status";
-import type { ComposeStack, DevStatus } from "@/lib/types";
+import type { ComposeStack, DevStatus, SetupCheck } from "@/lib/types";
 import { DockerNotice, StackList, type StackActionKind } from "./Docker";
 import { Badge, Button, Panel, PropertyList } from "./ui";
 import LogPanel from "./LogPanel";
@@ -137,37 +137,62 @@ export function devState(dev: DevControls): { label: string; tone: Tone; busy: b
   return { label: status ? "Stopped" : "Checking", tone: "neutral", busy: false };
 }
 
-/** Start / Stop for the title bar and the panel. */
-export function DevButtons({ dev, size = "sm" }: { dev: DevControls; size?: "sm" | "md" }) {
-  const { pending, act, canStart, canStop } = dev;
-  return (
-    <>
-      <Button
-        variant="primary"
-        size={size}
-        icon={pending === "start" ? LoaderCircle : Play}
-        spin={pending === "start"}
-        onClick={() => act("start")}
-        disabled={!canStart}
-        title="Start the dev environment (S)"
-      >
-        Start
-      </Button>
+/** Warning-level setup checks: things likely to stop Start from working. */
+export function setupWarnings(dev: DevControls): SetupCheck[] {
+  return dev.status?.checks.filter((c) => c.level === "warn") ?? [];
+}
+
+/** "2 setup issues may stop this: No .env file, …", or null when there are none. */
+export function setupWarningText(warnings: SetupCheck[], subject = "this"): string | null {
+  if (warnings.length === 0) return null;
+  const what = warnings.length === 1 ? "A setup issue" : `${warnings.length} setup issues`;
+  return `${what} may stop ${subject}: ${warnings.map((w) => w.title).join(", ")}`;
+}
+
+/**
+ * The page's lifecycle control, for the title bar: Start (the page's one filled
+ * button) while stopped, Stop while running. Setup warnings show on Start but never block it.
+ */
+export function LifecycleButton({ dev }: { dev: DevControls }) {
+  const { status, pending, act, canStart, canStop } = dev;
+  if (canStop || pending === "stop") {
+    return (
       <Button
         variant="danger"
-        size={size}
         icon={pending === "stop" ? LoaderCircle : Square}
         spin={pending === "stop"}
         onClick={() => act("stop")}
         disabled={!canStop}
+        title="Stop the dev environment"
       >
         Stop
       </Button>
-    </>
+    );
+  }
+  const nothing = !!status && status.steps.length === 0;
+  const warning = nothing ? null : setupWarningText(setupWarnings(dev));
+  const title = nothing ? "Nothing to start in this project" : `Start the dev environment (S)${warning ? `. ${warning}` : ""}`;
+  return (
+    <Button
+      variant="primary"
+      icon={pending === "start" ? LoaderCircle : Play}
+      spin={pending === "start"}
+      onClick={() => act("start")}
+      disabled={!canStart}
+      title={title}
+    >
+      Start
+      {warning && (
+        <>
+          <TriangleAlert aria-hidden size={14} strokeWidth={2.25} className="-mr-0.5 shrink-0 opacity-90" />
+          <span className="sr-only">, {warning}</span>
+        </>
+      )}
+    </Button>
   );
 }
 
-/** Dev environment: state, Start/Stop, what Start runs, where it's served, compose stacks, output. */
+/** Dev environment: state, what Start runs, where it's served, compose stacks, output. */
 export function RunPanel({
   dev,
   dockerStarting = false,
@@ -181,6 +206,8 @@ export function RunPanel({
 }) {
   const { status, loadError, actionError, showLog, setShowLog } = dev;
   const state = devState(dev);
+  // Start lives in the title bar; say here, too, what might stop it.
+  const warning = status && status.steps.length > 0 && !status.running ? setupWarningText(setupWarnings(dev), "Start") : null;
 
   const rows: { label: string; value: ReactNode }[] = [];
   if (status) {
@@ -231,12 +258,18 @@ export function RunPanel({
   }
 
   return (
-    <Panel id="run-heading" title="Dev environment" className={className} bodyClassName="" actions={<DevButtons dev={dev} />}>
+    <Panel id="run-heading" title="Dev environment" className={className} bodyClassName="">
       {!status ? (
         <p className="px-5 py-3.5 text-[13px] text-fg-3">{loadError ?? "Checking what's running…"}</p>
       ) : (
         <>
           <PropertyList rows={rows} />
+          {warning && (
+            <p className="flex items-start gap-2 border-t border-line px-5 py-3 text-[13px] text-fg-2">
+              <TriangleAlert aria-hidden size={15} strokeWidth={2.25} className="mt-0.5 shrink-0 text-warn" />
+              <span className="min-w-0">{warning}. See Needs attention for the fix.</span>
+            </p>
+          )}
           {status.dockerError && onStartDocker && (
             <div className="border-t border-line px-5 py-3.5">
               <DockerNotice docker={status.docker} starting={dockerStarting} onStart={onStartDocker} inline />

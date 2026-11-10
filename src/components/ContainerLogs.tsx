@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Pause, Play, ScrollText } from "lucide-react";
 import type { ContainerLogLine, ContainerLogs as LogsData } from "@/lib/types";
 import { Button, Chip, EmptyState, FilterBar, Panel } from "./ui";
@@ -15,6 +15,15 @@ const WARN = /\b(warn|warning|deprecated)\b/i;
 
 const lineKey = (l: ContainerLogLine) => `${l.ts}\u0000${l.container}\u0000${l.text}`;
 
+// Below Tailwind's sm breakpoint a phone can't spare the width for timestamps.
+const NARROW = "(max-width: 639.98px)";
+const subscribeNarrow = (onChange: () => void) => {
+  const mq = matchMedia(NARROW);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+};
+const isNarrow = () => matchMedia(NARROW).matches;
+
 function clock(ts: string) {
   const d = new Date(ts);
   return `${d.toLocaleTimeString([], { hour12: false })}.${String(d.getMilliseconds()).padStart(3, "0")}`;
@@ -28,7 +37,10 @@ export default function ContainerLogs({ projectName }: { projectName: string }) 
   const [follow, setFollow] = useState(true);
   const [only, setOnly] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
-  const [showTime, setShowTime] = useState(true);
+  // Timestamps default on, off on phones; once toggled, the choice sticks.
+  const narrow = useSyncExternalStore(subscribeNarrow, isNarrow, () => false);
+  const [timeChoice, setTimeChoice] = useState<boolean | null>(null);
+  const showTime = timeChoice ?? !narrow;
   const lastTs = useRef<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
@@ -104,7 +116,7 @@ export default function ContainerLogs({ projectName }: { projectName: string }) 
       bodyClassName=""
       actions={
         <>
-          <Chip active={showTime} onClick={() => setShowTime((v) => !v)}>
+          <Chip active={showTime} onClick={() => setTimeChoice(!showTime)}>
             Timestamps
           </Chip>
           <Button
@@ -166,7 +178,7 @@ export default function ContainerLogs({ projectName }: { projectName: string }) 
                     <tr key={i} className="align-top hover:bg-white/5">
                       {showTime && <td className="pr-3 pl-4 whitespace-nowrap text-[#9aa0a6] tabular-nums">{clock(l.ts)}</td>}
                       <td className={`pr-3 whitespace-nowrap ${showTime ? "" : "pl-4"} ${label?.color ?? ""}`}>{label?.text ?? l.service}</td>
-                      <td className={`w-full pr-4 break-all whitespace-pre-wrap ${tone}`}>{l.text || " "}</td>
+                      <td className={`w-full pr-4 whitespace-pre-wrap wrap-anywhere ${tone}`}>{l.text || " "}</td>
                     </tr>
                   );
                 })}
