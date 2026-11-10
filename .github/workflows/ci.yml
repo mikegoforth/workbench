@@ -46,3 +46,34 @@ jobs:
       # Also builds the server bundle and fails if it picked up .git, src or .env files.
       - run: npm run desktop:build
       - run: npm audit --audit-level=high
+
+  # After a push to main, publishes main's coverage for the README badge: a
+  # shields.io endpoint file, force-pushed as the only commit on the `badges`
+  # branch. Only this job can write to the repo, and it runs no project code.
+  coverage-badge:
+    name: Coverage badge
+    needs: checks
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Publish coverage.json to the badges branch
+        run: |
+          pct=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+          color=$(jq -nr --argjson p "$pct" 'if $p >= 90 then "brightgreen" elif $p >= 80 then "green" elif $p >= 70 then "yellowgreen" elif $p >= 60 then "yellow" else "red" end')
+          mkdir badges && cd badges
+          jq -n --arg msg "${pct}%" --arg color "$color" '{schemaVersion: 1, label: "coverage", message: $msg, color: $color}' > coverage.json
+          cat coverage.json
+          git init -q -b badges
+          git add coverage.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Coverage ${pct}% at ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,6 +7,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/mikegoforth/workbench)](https://github.com/mikegoforth/workbench/releases/latest)
 [![CI](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikegoforth%2Fworkbench%2Fbadges%2Fcoverage.json)](docs/development.md#commands)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <!--
