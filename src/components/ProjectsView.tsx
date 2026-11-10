@@ -144,7 +144,7 @@ export default function ProjectsView({
       <PageBody>
         {hidden && (
           <p className="mb-4 text-[13.5px] text-fg-2">
-            Hidden projects stay off the dashboard and the Projects list. They still show under Dev servers while they run.
+            Hidden projects stay off the dashboard and the Projects list. They still show under Running while they run.
           </p>
         )}
         {error && (

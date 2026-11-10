@@ -14,7 +14,7 @@ export const DETAIL_TABS: DetailTab[] = ["details", "changes", "dev", "logs", "h
 export const VIEW_TITLE: Record<View, string> = {
   dashboard: "Dashboard",
   projects: "Projects",
-  servers: "Dev servers",
+  servers: "Running",
   attention: "Needs attention",
   activity: "Activity",
   todos: "Todos",

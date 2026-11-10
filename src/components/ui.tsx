@@ -318,7 +318,7 @@ export function Panel({
   countTone?: Tone;
   description?: ReactNode;
   actions?: ReactNode;
-  /** A footer link row, e.g. "Go to Dev servers". */
+  /** A footer link row, e.g. "Go to Todos". */
   footer?: ReactNode;
   className?: string;
   bodyClassName?: string;

@@ -213,7 +213,7 @@ export default function Dashboard() {
 
   const derived = useMemo(() => {
     const visible = items.filter((i) => !i.project.hidden);
-    // Dev servers include hidden projects, so nothing hides a server you forgot.
+    // Running includes hidden projects, so nothing hides a server you forgot.
     const servers = items.filter((i) => i.state.bay === "running").sort((a, b) => a.project.name.localeCompare(b.project.name));
     const attention = visible
       .filter((i) => i.state.reasons.some((r) => r.severity !== "note"))

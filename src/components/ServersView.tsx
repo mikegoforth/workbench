@@ -153,7 +153,7 @@ export default function ServersView({ ctx, items }: { ctx: Ctx; items: Item[] })
   return (
     <>
       <TitleBar
-        title="Dev servers"
+        title="Running"
         actions={
           <Button variant="ghost" icon={RefreshCw} onClick={ctx.actions.activity}>
             Refresh
