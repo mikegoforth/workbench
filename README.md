@@ -12,7 +12,8 @@ and pick up where you left off, without opening GitHub, a terminal, or each repo
 [![Latest release](https://img.shields.io/github/v/release/mikegoforth/workbench?label=release)](https://github.com/mikegoforth/workbench/releases/latest)
 [![CI](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikegoforth%2Fworkbench%2Fbadges%2Fcoverage.json)](docs/development.md#commands)
-[![Platforms: macOS 13+ and Linux](https://img.shields.io/badge/platforms-macOS%2013%2B%20%7C%20Linux-24292f)](#requirements)
+[![macOS](https://img.shields.io/badge/--24292f?logo=apple&logoColor=white "macOS 13 or later")](#macos)
+[![Linux](https://img.shields.io/badge/--24292f?logo=linux&logoColor=white "Linux (x64, arm64)")](#linux)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 [**Download**](https://github.com/mikegoforth/workbench/releases/latest) · [Features](#features) · [Install](#install) · [Requirements](#requirements) · [Docs](docs/usage.md)
