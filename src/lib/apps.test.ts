@@ -126,7 +126,7 @@ describe("editorLaunch on macOS", () => {
   });
 
   it("finds an app in ~/Applications", () => {
-    const app = path.join(HOME, "Applications", "Cursor.app");
+    const app = path.posix.join(HOME, "Applications", "Cursor.app");
     fs.mkdirSync(app, { recursive: true });
     expect(editorLaunch("cursor", DIR, null)).toEqual({ command: "open", args: ["-a", app, DIR] });
   });
@@ -167,8 +167,8 @@ describe("editorLaunch on Linux", () => {
   });
 
   it("finds Zed's installer copy and JetBrains Toolbox scripts in the home folder", () => {
-    const zed = touch(path.join(HOME, ".local", "bin", "zed"));
-    const idea = touch(path.join(HOME, ".local", "share", "JetBrains", "Toolbox", "scripts", "idea"));
+    const zed = touch(path.posix.join(HOME, ".local", "bin", "zed"));
+    const idea = touch(path.posix.join(HOME, ".local", "share", "JetBrains", "Toolbox", "scripts", "idea"));
     expect(editorLaunch("zed", DIR, FILE)).toEqual({ command: zed, args: [DIR, FILE], detached: true });
     expect(editorLaunch("idea", DIR, FILE)).toEqual({ command: idea, args: [FILE], detached: true });
   });

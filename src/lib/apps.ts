@@ -80,7 +80,8 @@ function jetbrainsWindows(prefix: string, exe: string): string[] {
   });
 }
 
-const toolbox = (home: string, script: string) => path.join(home, ".local", "share", "JetBrains", "Toolbox", "scripts", script);
+// macOS and Linux paths are always POSIX, whatever system this code runs on.
+const toolbox = (home: string, script: string) => path.posix.join(home, ".local", "share", "JetBrains", "Toolbox", "scripts", script);
 
 const EDITOR_SPECS: Record<Exclude<EditorId, "vscode">, EditorSpec> = {
   cursor: {
@@ -94,7 +95,7 @@ const EDITOR_SPECS: Record<Exclude<EditorId, "vscode">, EditorSpec> = {
     // `zeditor` is what some distributions call it.
     commands: ["zed", "zeditor"],
     macApps: ["Zed.app"],
-    linux: (home) => [path.join(home, ".local", "bin", "zed"), "/usr/bin/zeditor"],
+    linux: (home) => [path.posix.join(home, ".local", "bin", "zed"), "/usr/bin/zeditor"],
     windows: () => windowsInstalls(["Zed"], "Zed.exe"),
     args: "folder-and-file",
   },
@@ -138,10 +139,10 @@ const MAC_TERMINAL_APPS: Partial<Record<TerminalId, string>> = {
 
 /** The first of these app bundles in /Applications or ~/Applications. */
 function macApp(bundles: string[]): string | null {
-  const dirs = ["/Applications", path.join(os.homedir(), "Applications")];
+  const dirs = ["/Applications", path.posix.join(os.homedir(), "Applications")];
   for (const bundle of bundles) {
     for (const dir of dirs) {
-      const app = path.join(/*turbopackIgnore: true*/ dir, bundle);
+      const app = path.posix.join(/*turbopackIgnore: true*/ dir, bundle);
       if (fs.existsSync(/*turbopackIgnore: true*/ app)) return app;
     }
   }
