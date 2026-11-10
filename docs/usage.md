@@ -24,6 +24,10 @@
 | `Esc` | Go back |
 | `O` / `T` / `S` / `G` | On a project page: open in VS Code / Terminal, Start, open on GitHub |
 
+## Color themes
+
+The palette button at the right of the top bar opens the theme picker: **Light**, **Paper** (warm, low-glare), **Dark**, **Dimmed** (soft slate), **High contrast light** and **High contrast dark**, the special themes **Matrix**, **Cyberpunk** and **Crypto**, or **Follow system** (Light or Dark, as the system is set). Arrow keys preview each theme across the whole app; `Enter` or a click keeps it and `Esc` puts the previous one back. The choice is remembered on this computer.
+
 ## What the actions do
 
 - **Start** runs `docker compose up -d` if the project root has a compose file, then its `dev` (or `start`) script. Processes run detached, so they keep running when workbench restarts or updates.

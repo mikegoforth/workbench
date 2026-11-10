@@ -160,7 +160,7 @@ export default function GitHubPanel({ projectName, className = "" }: { projectNa
                 const tone = checkTone(pr.checks);
                 return (
                   <li key={pr.number}>
-                    <a href={pr.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 px-4 py-3 hover:bg-subtle">
+                    <a href={pr.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 px-5 py-3.5 hover:bg-subtle">
                       <tone.Icon aria-label={`Checks ${tone.word}`} size={15} strokeWidth={2.25} className={`mt-0.5 shrink-0 ${tone.tone}`} />
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13.5px] wrap-break-word text-fg">

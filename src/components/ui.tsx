@@ -43,10 +43,10 @@ const VARIANT: Record<Variant, string> = {
   danger: "border border-line bg-surface text-bad hover:border-bad-line hover:bg-bad-soft",
 };
 const SIZE: Record<Size, string> = {
-  sm: "h-7 gap-1.5 px-2.5 text-[13px]",
-  md: "h-8 gap-2 px-3 text-[13.5px]",
+  sm: "h-8 gap-1.5 px-3 text-[13px]",
+  md: "h-9 gap-2 px-3.5 text-[13.5px]",
 };
-const ICON_SIZE: Record<Size, string> = { sm: "size-7", md: "size-8" };
+const ICON_SIZE: Record<Size, string> = { sm: "size-8", md: "size-9" };
 
 export function buttonClass(variant: Variant = "secondary", size: Size = "md", iconOnly = false) {
   return `inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
@@ -141,7 +141,7 @@ export function Badge({
   return (
     <span
       title={title}
-      className={`inline-flex h-5.5 shrink-0 items-center gap-1.5 rounded-full border px-2 text-[12px] leading-none font-medium whitespace-nowrap ${BADGE_TONE[tone]} ${className}`}
+      className={`inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[12px] leading-none font-medium whitespace-nowrap ${BADGE_TONE[tone]} ${className}`}
     >
       {dot && <StatusDot tone={tone} pulse={pulse} className="size-1.5!" />}
       {Icon && <Icon aria-hidden size={12} strokeWidth={2.25} className="shrink-0" />}
@@ -239,7 +239,7 @@ export function TitleBar({
   actions?: ReactNode;
 }) {
   return (
-    <div className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-line bg-surface px-3 py-2 sm:px-5">
+    <div className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-surface/95 px-5 py-3.5 backdrop-blur-sm sm:px-8">
       <div className="flex min-w-0 items-center gap-2">
         {onBack && <Button variant="plain" icon={ArrowLeft} onClick={onBack} aria-label={backLabel} title={`${backLabel} (Esc)`} />}
         <h1 className="min-w-0 text-[22px] leading-tight font-normal wrap-break-word text-fg">{title}</h1>
@@ -252,7 +252,7 @@ export function TitleBar({
 
 /** Page body: the padded column under the title bar. */
 export function PageBody({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 ${className}`}>{children}</div>;
+  return <div className={`mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-8 sm:py-7 ${className}`}>{children}</div>;
 }
 
 export function Card({ children, className = "", ...rest }: HTMLAttributes<HTMLElement>) {
@@ -281,7 +281,7 @@ export function CardHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line px-4 py-2.5">
+    <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line px-5 py-3.5">
       <div className="min-w-0">
         <h2 id={id} className="flex items-center gap-2 text-[15px] leading-tight font-medium text-fg">
           {Icon && <Icon aria-hidden size={17} strokeWidth={2} className="shrink-0 text-fg-3" />}
@@ -306,7 +306,7 @@ export function Panel({
   actions,
   footer,
   className = "",
-  bodyClassName = "p-4",
+  bodyClassName = "p-5",
   children,
 }: {
   id: string;
@@ -326,7 +326,7 @@ export function Panel({
     <Card aria-labelledby={id} className={`flex flex-col ${className}`}>
       <CardHeader id={id} title={title} icon={icon} count={count} countTone={countTone} description={description} actions={actions} />
       <div className={`flex-1 ${bodyClassName}`}>{children}</div>
-      {footer && <div className="border-t border-line px-2 py-1.5">{footer}</div>}
+      {footer && <div className="border-t border-line px-3 py-2">{footer}</div>}
     </Card>
   );
 }
@@ -336,7 +336,7 @@ export function PropertyList({ rows }: { rows: { label: string; value: ReactNode
   return (
     <dl className="divide-y divide-line">
       {rows.map((r) => (
-        <div key={r.label} className="grid grid-cols-1 gap-0.5 px-4 py-2.5 sm:grid-cols-[168px_minmax(0,1fr)] sm:gap-4">
+        <div key={r.label} className="grid grid-cols-1 gap-0.5 px-5 py-3 sm:grid-cols-[176px_minmax(0,1fr)] sm:gap-5">
           <dt className="text-[13px] text-fg-3">{r.label}</dt>
           <dd className="min-w-0 text-[13px] wrap-break-word text-fg">{r.value}</dd>
         </div>
@@ -417,7 +417,7 @@ export function Tabs<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(t.id)}
-            className={`-mb-px inline-flex h-11 shrink-0 items-center gap-2 border-b-[3px] px-4 text-[13.5px] font-medium transition-colors ${
+            className={`-mb-px inline-flex h-12 shrink-0 items-center gap-2 border-b-2 px-5 text-[13.5px] font-medium transition-colors ${
               active ? "border-brand text-brand-text" : "border-transparent text-fg-2 hover:bg-hover hover:text-fg"
             }`}
           >
@@ -485,7 +485,7 @@ export function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-medium transition-colors ${
+      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12.5px] font-medium transition-colors ${
         active ? "border-brand-line bg-brand-soft text-brand-text" : "border-line text-fg-2 hover:bg-hover"
       }`}
     >
@@ -509,7 +509,7 @@ export function FilterBar({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-3 py-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-5 py-3">
       <label className="flex h-8 min-w-56 flex-1 items-center gap-2 text-[13px]">
         <ListFilter aria-hidden size={17} strokeWidth={2} className="shrink-0 text-fg-2" />
         <span className="shrink-0 font-medium text-fg-2">Filter</span>
@@ -541,8 +541,8 @@ export function FilterBar({
 // ---- Tables ----
 
 export const TABLE = "w-full border-collapse text-left text-[13px]";
-export const TH = "h-10 border-b border-line px-3 text-[12.5px] font-medium whitespace-nowrap text-fg-2";
-export const TD = "border-b border-line px-3 py-2 align-middle";
+export const TH = "h-11 border-b border-line px-4 text-[12.5px] font-medium whitespace-nowrap text-fg-2";
+export const TD = "border-b border-line px-5 py-3.5 align-middle";
 export const TR = "group cursor-pointer transition-colors hover:bg-hover";
 
 export type SortDir = "asc" | "desc";

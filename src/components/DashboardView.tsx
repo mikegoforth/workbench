@@ -43,7 +43,7 @@ function ProjectLink({ name, onOpen }: { name: string; onOpen: (name: string) =>
 function ServerLine({ item, ctx }: { item: Item; ctx: Ctx }) {
   const { dev } = useServer(item.project.name, ctx.actions.activity);
   return (
-    <li className="flex items-center gap-3 px-4 py-2.5">
+    <li className="flex items-center gap-3 px-5 py-3">
       <StatusIcon status={item.status} size={16} />
       <ProjectLink name={item.project.name} onOpen={ctx.actions.open} />
       <span className="ml-auto min-w-0 truncate text-right">
@@ -56,7 +56,7 @@ function ServerLine({ item, ctx }: { item: Item; ctx: Ctx }) {
 function ResourceRow({ icon: Icon, label, count, tone, onClick }: { icon: LucideIcon; label: string; count: number; tone?: "ok" | "warn" | "info"; onClick: () => void }) {
   return (
     <li>
-      <button type="button" onClick={onClick} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[13.5px] hover:bg-hover">
+      <button type="button" onClick={onClick} className="flex w-full items-center gap-3 px-5 py-3 text-left text-[13.5px] hover:bg-hover">
         <Icon aria-hidden size={17} strokeWidth={2} className="shrink-0 text-fg-3" />
         <span className="flex-1 text-brand-text">{label}</span>
         <Count tone={count && tone ? tone : "neutral"}>{count}</Count>
@@ -107,7 +107,7 @@ function CiSummary({ items, ctx }: { items: Item[]; ctx: Ctx }) {
 
 /** One masonry tile. */
 function Tile({ children }: { children: ReactNode }) {
-  return <div className="mb-4 break-inside-avoid">{children}</div>;
+  return <div className="mb-6 break-inside-avoid">{children}</div>;
 }
 
 export default function DashboardView({ ctx, counts, visible, attention, servers }: { ctx: Ctx; counts: Counts; visible: Item[]; attention: Item[]; servers: Item[] }) {
@@ -133,7 +133,7 @@ export default function DashboardView({ ctx, counts, visible, attention, servers
         }
       />
       <PageBody>
-        <div className="columns-1 gap-4 lg:columns-2 xl:columns-3">
+        <div className="columns-1 gap-6 lg:columns-2 xl:columns-3">
           <Tile>
             <Panel
               id="dash-attention"
@@ -151,7 +151,7 @@ export default function DashboardView({ ctx, counts, visible, attention, servers
               ) : (
                 <ul className="divide-y divide-line">
                   {open.slice(0, 5).map((item) => (
-                    <li key={item.project.name} className="flex items-start gap-3 px-4 py-3">
+                    <li key={item.project.name} className="flex items-start gap-3 px-5 py-3.5">
                       <span className="pt-0.5">
                         <StatusIcon status={item.status} size={16} />
                       </span>
@@ -225,7 +225,7 @@ export default function DashboardView({ ctx, counts, visible, attention, servers
               ) : (
                 <ul className="divide-y divide-line">
                   {recent.map(({ project: p }) => (
-                    <li key={p.name} className="px-4 py-2.5">
+                    <li key={p.name} className="px-5 py-3">
                       <div className="flex items-baseline gap-3">
                         <ProjectLink name={p.name} onOpen={a.open} />
                         <span className="ml-auto shrink-0 text-[12px] text-fg-3 tabular-nums" title={timeAgo(p.lastCommitDate!)}>
@@ -264,7 +264,7 @@ export default function DashboardView({ ctx, counts, visible, attention, servers
               ) : (
                 <ul className="divide-y divide-line">
                   {todos.slice(0, 6).map(({ todo, project }) => (
-                    <li key={todo.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <li key={todo.id} className="flex items-center gap-3 px-5 py-3">
                       <input
                         type="checkbox"
                         checked={false}
@@ -279,7 +279,7 @@ export default function DashboardView({ ctx, counts, visible, attention, servers
                     </li>
                   ))}
                   {todos.length > 6 && (
-                    <li className="px-4 py-2 text-[12.5px] text-fg-3">
+                    <li className="px-5 py-2.5 text-[12.5px] text-fg-3">
                       <TextButton onClick={go("todos")}>{todos.length - 6} more</TextButton>
                     </li>
                   )}

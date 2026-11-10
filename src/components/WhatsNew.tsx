@@ -83,7 +83,7 @@ export default function WhatsNew({ collapsed }: { collapsed: boolean }) {
         aria-haspopup="dialog"
         aria-label={label}
         title={collapsed ? label : undefined}
-        className={`relative flex h-9 w-full items-center gap-4 rounded-full text-[13px] text-fg-2 hover:bg-hover hover:text-fg ${collapsed ? "justify-center" : "px-4"}`}
+        className={`relative flex h-10 w-full items-center gap-3.5 rounded-lg text-[13px] text-fg-2 hover:bg-hover hover:text-fg ${collapsed ? "justify-center" : "pr-3 pl-4"}`}
       >
         <span className="relative shrink-0">
           <Sparkles aria-hidden size={18} strokeWidth={2} className={unseen ? "text-brand-text" : undefined} />

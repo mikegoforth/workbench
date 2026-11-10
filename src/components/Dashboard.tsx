@@ -499,7 +499,7 @@ export default function Dashboard() {
     // Usually first run: the default ~/Projects doesn't exist. Offer to pick the folder right here.
     content = (
       <PageBody className="max-w-3xl!">
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-bad-line bg-bad-soft px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-bad-line bg-bad-soft px-5 py-3.5">
           <p className="min-w-0 flex-1 text-[14px] text-bad">
             {dirInfo && !dirInfo.exists ? (
               <>

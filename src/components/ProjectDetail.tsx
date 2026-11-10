@@ -48,7 +48,7 @@ async function saveNotes(projectName: string, notes: string, todos: TodoItem[]) 
 
 function Banner({ children }: { children: ReactNode }) {
   return (
-    <p role="alert" className="mb-4 rounded border border-bad-line bg-bad-soft px-4 py-2.5 text-[13.5px] text-bad">
+    <p role="alert" className="mb-4 rounded border border-bad-line bg-bad-soft px-5 py-3 text-[13.5px] text-bad">
       {children}
     </p>
   );
@@ -417,15 +417,15 @@ export default function ProjectDetail({
         {(openError || stripError || sync.error) && <Banner>{openError ?? stripError ?? sync.error}</Banner>}
 
         {activeTab === "details" && (
-          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <div className="min-w-0 space-y-4">
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <div className="min-w-0 space-y-6">
               {notesCard}
               <Panel id="details-heading" title="Project details" bodyClassName="">
                 <PropertyList rows={detailRows} />
               </Panel>
               {isGit && <RecentCommits projectName={project.name} repoUrl={project.repoUrl} refreshKey={historyKey} onViewAll={() => onTab("history")} />}
             </div>
-            <div className="min-w-0 space-y-4">
+            <div className="min-w-0 space-y-6">
               <AttentionPanel project={project} state={state} dev={dev} pullPending={pullPending} onPull={onPull} onLogs={() => onTab("logs")} />
               <RunPanel dev={dev} dockerStarting={dockerStarting} onStartDocker={onStartDocker} />
               {isGit && (
@@ -446,9 +446,9 @@ export default function ProjectDetail({
         )}
 
         {activeTab === "dev" && (
-          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
             <RunPanel dev={dev} dockerStarting={dockerStarting} onStartDocker={onStartDocker} />
-            <div className="min-w-0 space-y-4">
+            <div className="min-w-0 space-y-6">
               <ScriptsPanel projectName={project.name} onActivity={onActivity} />
               <AttentionPanel project={project} state={state} dev={dev} pullPending={pullPending} onPull={onPull} onLogs={() => onTab("logs")} />
             </div>

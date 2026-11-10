@@ -20,7 +20,7 @@ export default function RequirementList({ requirements }: { requirements: Requir
       </ul>
       {optional.length > 0 && (
         <>
-          <p className="border-t border-line bg-subtle px-4 py-2 text-[11.5px] font-medium tracking-[0.06em] text-fg-3 uppercase">
+          <p className="border-t border-line bg-subtle px-5 py-2.5 text-[11.5px] font-medium tracking-[0.06em] text-fg-3 uppercase">
             Optional
           </p>
           <ul className="divide-y divide-line border-t border-line" aria-label="Optional">
