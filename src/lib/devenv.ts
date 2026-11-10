@@ -165,8 +165,17 @@ function planSteps(plan: Plan): string[] {
 
 // dev slot: data/dev/<name>.{json,log}; script slot: data/dev/scripts/<name>.{json,log}
 const slotDir = (slot: Slot) => (slot === "dev" ? devDir() : path.join(devDir(), "scripts"));
-const statePath = (name: string, slot: Slot) => path.join(slotDir(slot), `${name}.json`);
-const logPath = (name: string, slot: Slot) => path.join(slotDir(slot), `${name}.log`);
+const SAFE_PROJECT_NAME = /^[A-Za-z0-9._-]{1,128}$/;
+
+function safeProjectFileStem(name: string): string {
+  if (!SAFE_PROJECT_NAME.test(name)) {
+    throw new DevError(400, "Invalid project name");
+  }
+  return name;
+}
+
+const statePath = (name: string, slot: Slot) => path.join(slotDir(slot), `${safeProjectFileStem(name)}.json`);
+const logPath = (name: string, slot: Slot) => path.join(slotDir(slot), `${safeProjectFileStem(name)}.log`);
 
 function readState(name: string, slot: Slot): RunState | null {
   try {
