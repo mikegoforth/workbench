@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isThemeId, readThemePref, resolveTheme, THEME_KEY, themeInfo, themeInitScript, THEMES } from "./theme";
+import { isThemeId, readThemePref, resolveTheme, scriptSafeJson, THEME_KEY, themeInfo, themeInitScript, THEMES } from "./theme";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -70,7 +70,21 @@ describe("readThemePref", () => {
   });
 });
 
+describe("scriptSafeJson", () => {
+  it("can't close a script tag or end a line, and reads back as the same value", () => {
+    const value = { a: "</script><script>alert(1)</script>", b: "line\u2028break\u2029", c: [1, "x/y"] };
+    const json = scriptSafeJson(value);
+    expect(json).not.toMatch(/[<>/\u2028\u2029]/);
+    expect(JSON.parse(json)).toEqual(value);
+    expect(new Function(`return ${json}`)()).toEqual(value);
+  });
+});
+
 describe("themeInitScript", () => {
+  it("contains nothing that could close its script tag", () => {
+    expect(themeInitScript).not.toMatch(/<\/?script/i);
+  });
+
   const run = () => new Function(themeInitScript)();
 
   it("sets the saved theme and its mode before first paint", () => {

@@ -43,10 +43,19 @@ export function resolveTheme(pref: ThemePref, prefersDark: boolean): ThemeId {
 }
 
 /**
+ * JSON that's safe inside an inline <script>: "<", ">" and "/" can't close the
+ * tag, and U+2028/U+2029 can't end a line, because each becomes a \u escape
+ * (which JavaScript reads back as the same character).
+ */
+export function scriptSafeJson(value: unknown): string {
+  return JSON.stringify(value).replace(/[<>/\u2028\u2029]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+}
+
+/**
  * Runs in <head> before first paint so the page never flashes the wrong
  * theme. Storage can throw (private windows); fall back to the system theme.
  */
-export const themeInitScript = `(function(){var m=${JSON.stringify(Object.fromEntries(THEMES.map((t) => [t.id, t.mode])))};var d=matchMedia("(prefers-color-scheme: dark)").matches;var p=null;try{p=localStorage.getItem("${THEME_KEY}");}catch(e){}var t=m[p]?p:(d?"dark":"light");var r=document.documentElement;r.dataset.theme=t;r.dataset.mode=m[t];})();`;
+export const themeInitScript = `(function(){var m=${scriptSafeJson(Object.fromEntries(THEMES.map((t) => [t.id, t.mode])))};var k=${scriptSafeJson(THEME_KEY)};var d=matchMedia("(prefers-color-scheme: dark)").matches;var p=null;try{p=localStorage.getItem(k);}catch(e){}var t=m[p]?p:(d?"dark":"light");var r=document.documentElement;r.dataset.theme=t;r.dataset.mode=m[t];})();`;
 
 export function readThemePref(): ThemePref {
   try {
