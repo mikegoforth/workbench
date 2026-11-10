@@ -38,7 +38,7 @@ export default function UpdateBanner() {
   if (!status || (status.state !== "ready" && status.state !== "manual") || dismissed === status.version) return null;
 
   return (
-    <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-brand-line bg-brand-soft px-4 py-2.5 text-[13.5px] sm:px-5">
+    <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-brand-line bg-brand-soft px-5 py-3 text-[13.5px] sm:px-5">
       <Sparkles aria-hidden size={18} strokeWidth={2} className="shrink-0 text-brand-text" />
       <p className="min-w-0 flex-1 text-fg">
         <span className="font-medium">workbench {status.version} is {status.state === "ready" ? "ready to install" : "available"}.</span>{" "}

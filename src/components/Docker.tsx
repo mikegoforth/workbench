@@ -41,7 +41,7 @@ export function DockerNotice({
     <div
       role="status"
       className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-warn-line bg-warn-soft text-[13.5px] ${
-        inline ? "rounded border px-3 py-2.5" : "border-b px-4 py-2.5 sm:px-5"
+        inline ? "rounded border px-3 py-2.5" : "border-b px-5 py-3 sm:px-5"
       }`}
     >
       <TriangleAlert aria-hidden size={18} strokeWidth={2} className="shrink-0 text-warn" />
@@ -149,7 +149,7 @@ export function StackList({
           const sorted = [...stack.services].sort((a, b) => Number(serviceState(b).up) - Number(serviceState(a).up));
           const shown = expanded[key] ? sorted : sorted.slice(0, 6);
           return (
-            <li key={key} className="px-4 py-3">
+            <li key={key} className="px-5 py-3.5">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
                 <Container aria-hidden size={16} strokeWidth={2} className="shrink-0 text-fg-3" />
                 <span className="font-mono text-[13px] font-medium text-fg">{stack.name}</span>

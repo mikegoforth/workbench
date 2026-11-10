@@ -207,7 +207,7 @@ export default function ServersView({ ctx, items }: { ctx: Ctx; items: Item[] })
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-2.5 text-right text-[12.5px] text-fg-2 tabular-nums">
+          <div className="px-5 py-3 text-right text-[12.5px] text-fg-2 tabular-nums">
             {items.length} running
           </div>
         </Card>

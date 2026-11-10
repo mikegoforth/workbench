@@ -236,7 +236,7 @@ function createWindow() {
     title: "workbench",
     show: false,
     // The page's --bg, so the window doesn't flash white before it paints.
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1b1c1e" : "#f8f9fa",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#1b1b1d" : "#f7f7f8",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,

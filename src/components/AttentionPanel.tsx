@@ -22,7 +22,7 @@ function Row({
   const Icon = severity === "nogo" ? CircleX : severity === "hold" ? TriangleAlert : Info;
   const tone = severity === "nogo" ? "text-bad" : severity === "hold" ? "text-warn" : "text-fg-3";
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
+    <li className="flex items-start gap-3 px-5 py-3.5">
       <Icon aria-hidden size={16} strokeWidth={2.25} className={`mt-px shrink-0 ${tone}`} />
       <div className="min-w-0 flex-1">
         <p className="text-[13.5px] font-medium text-fg">{title}</p>
@@ -142,7 +142,7 @@ export default function AttentionPanel({
         </ul>
       )}
       {passing.length > 0 && (
-        <ul className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 text-[12px] text-fg-3">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-5 py-3 text-[12px] text-fg-3">
           {passing.map((c) => (
             <li key={c.id} className="inline-flex items-center gap-1">
               <Check aria-hidden size={12} strokeWidth={2.5} className="text-ok" />

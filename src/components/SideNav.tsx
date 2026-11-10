@@ -79,13 +79,13 @@ export default function SideNav({
       aria-label="workbench"
       className={`flex shrink-0 flex-col border-r border-line bg-sidebar transition-[width] duration-150 ${collapsed ? "w-15" : "w-64"} ${className}`}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto py-3">
         {groups.map((g, gi) => (
-          <div key={gi} className={gi > 0 ? "mt-2 border-t border-line pt-2" : ""}>
+          <div key={gi} className={gi > 0 ? "mt-4" : ""}>
             {g.title && !collapsed && (
-              <p className="px-6 pt-1.5 pb-1 text-[11.5px] font-medium tracking-[0.06em] text-fg-3 uppercase">{g.title}</p>
+              <p className="px-6 pt-1 pb-1.5 text-[11.5px] font-medium tracking-[0.06em] text-fg-3 uppercase">{g.title}</p>
             )}
-            <ul>
+            <ul className="space-y-0.5 px-2">
               {g.items.map((it) => {
                 const active = it.view === view;
                 const Icon = it.icon;
@@ -97,8 +97,8 @@ export default function SideNav({
                       onClick={() => onGo(it.view)}
                       aria-current={active ? "page" : undefined}
                       title={collapsed ? `${label}${it.count ? ` (${it.count})` : ""}` : undefined}
-                      className={`relative flex h-9 w-full items-center gap-4 text-left text-[13.5px] transition-colors ${
-                        collapsed ? "justify-center rounded-full mx-auto w-11!" : "rounded-r-full pr-3 pl-6"
+                      className={`relative flex h-10 w-full items-center gap-3.5 rounded-lg text-left text-[13.5px] transition-colors ${
+                        collapsed ? "justify-center mx-auto w-11!" : "pr-3 pl-4"
                       } ${active ? "bg-brand-soft font-medium text-brand-text" : "text-fg-2 hover:bg-hover hover:text-fg"}`}
                     >
                       <Icon aria-hidden size={18} strokeWidth={2} className="shrink-0" />
@@ -131,7 +131,7 @@ export default function SideNav({
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className={`flex h-9 w-full items-center gap-4 rounded-full text-[13px] text-fg-2 hover:bg-hover hover:text-fg ${collapsed ? "justify-center" : "px-4"}`}
+            className={`flex h-10 w-full items-center gap-3.5 rounded-lg text-[13px] text-fg-2 hover:bg-hover hover:text-fg ${collapsed ? "justify-center" : "pr-3 pl-4"}`}
             aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
             title={collapsed ? "Expand navigation" : "Collapse navigation"}
           >

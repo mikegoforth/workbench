@@ -233,18 +233,18 @@ export function RunPanel({
   return (
     <Panel id="run-heading" title="Dev environment" className={className} bodyClassName="" actions={<DevButtons dev={dev} />}>
       {!status ? (
-        <p className="px-4 py-3 text-[13px] text-fg-3">{loadError ?? "Checking what's running…"}</p>
+        <p className="px-5 py-3.5 text-[13px] text-fg-3">{loadError ?? "Checking what's running…"}</p>
       ) : (
         <>
           <PropertyList rows={rows} />
           {status.dockerError && onStartDocker && (
-            <div className="border-t border-line px-4 py-3">
+            <div className="border-t border-line px-5 py-3.5">
               <DockerNotice docker={status.docker} starting={dockerStarting} onStart={onStartDocker} inline />
             </div>
           )}
           <StackList stacks={status.stacks} docker={status.docker} pending={dev.stackPending} onAction={dev.stackAct} />
           {(status.note || (status.dockerError && !onStartDocker) || actionError) && (
-            <div className="space-y-1 border-t border-line px-4 py-2.5 text-[13px]">
+            <div className="space-y-1 border-t border-line px-5 py-3 text-[13px]">
               {status.note && <p className="text-fg-3">{status.note}</p>}
               {status.dockerError && !onStartDocker && <p className="font-medium text-warn">Docker: {status.dockerError}</p>}
               {actionError && (
@@ -255,7 +255,7 @@ export function RunPanel({
             </div>
           )}
           {(status.log.length > 0 || showLog) && (
-            <div className="border-t border-line px-4 py-2.5">
+            <div className="border-t border-line px-5 py-3">
               <LogPanel lines={status.log} open={showLog} onToggle={() => setShowLog((v) => !v)} followKey={status.startedAt} />
             </div>
           )}

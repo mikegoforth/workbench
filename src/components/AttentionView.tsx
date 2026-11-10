@@ -128,13 +128,13 @@ export default function AttentionView({ ctx, items }: { ctx: Ctx; items: Item[] 
           </Button>
         }
       />
-      <PageBody className="space-y-4">
+      <PageBody className="space-y-6">
         <p className="text-[13.5px] text-fg-2">
           Failing containers, failing CI, merge conflicts, review requests, and branches behind or ahead of their remote. Park a
           project to acknowledge its issues; it comes back when they change.
         </p>
         {ctx.overview?.githubError && (
-          <p className="rounded border border-warn-line bg-warn-soft px-4 py-2.5 text-[13.5px] text-warn">
+          <p className="rounded border border-warn-line bg-warn-soft px-5 py-3 text-[13.5px] text-warn">
             CI and review requests unavailable: {ctx.overview.githubError}
           </p>
         )}

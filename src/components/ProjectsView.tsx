@@ -148,7 +148,7 @@ export default function ProjectsView({
           </p>
         )}
         {error && (
-          <p role="alert" className="mb-4 rounded border border-bad-line bg-bad-soft px-4 py-2.5 text-[13.5px] text-bad">
+          <p role="alert" className="mb-4 rounded border border-bad-line bg-bad-soft px-5 py-3 text-[13.5px] text-bad">
             {error}
           </p>
         )}
@@ -294,7 +294,7 @@ export default function ProjectsView({
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-end gap-4 px-4 py-2.5 text-[12.5px] text-fg-2">
+          <div className="flex items-center justify-end gap-4 px-5 py-3 text-[12.5px] text-fg-2">
             {chosen.length > 0 && <span className="mr-auto">{chosen.length} selected</span>}
             <span className="tabular-nums">
               {rows.length === 0 ? 0 : 1} – {rows.length} of {rows.length}

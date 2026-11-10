@@ -136,11 +136,11 @@ export default function ContainerLogs({ projectName }: { projectName: string }) 
         })}
       </FilterBar>
       {error ? (
-        <p className="px-4 py-3 text-[13px] font-medium text-bad">{error}</p>
+        <p className="px-5 py-3.5 text-[13px] font-medium text-bad">{error}</p>
       ) : !meta ? (
-        <p className="px-4 py-3 text-[13px] text-fg-3">Reading container logs…</p>
+        <p className="px-5 py-3.5 text-[13px] text-fg-3">Reading container logs…</p>
       ) : daemonDown ? (
-        <p className="px-4 py-3 text-[13px] text-warn">{meta.docker.message ?? "Docker isn't available."}</p>
+        <p className="px-5 py-3.5 text-[13px] text-warn">{meta.docker.message ?? "Docker isn't available."}</p>
       ) : containers.length === 0 ? (
         <EmptyState icon={ScrollText} title="No containers">
           Start one of this project&apos;s compose stacks and its output shows up here.
@@ -155,7 +155,7 @@ export default function ContainerLogs({ projectName }: { projectName: string }) 
           className="h-[min(68vh,720px)] overflow-auto rounded-b-lg bg-term py-2 font-mono text-[12px] leading-[1.55] text-term-fg"
         >
           {shown.length === 0 ? (
-            <p className="px-4 py-2 text-[#9aa0a6]">{lines.length ? "No lines match the filter." : "No output yet."}</p>
+            <p className="px-5 py-2.5 text-[#9aa0a6]">{lines.length ? "No lines match the filter." : "No output yet."}</p>
           ) : (
             <table className="w-full border-collapse">
               <tbody>

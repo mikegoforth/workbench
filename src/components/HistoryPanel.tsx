@@ -48,7 +48,7 @@ function CommitRows({ commits, repoUrl }: { commits: GitHistory["commits"]; repo
       {commits.map((c) => {
         const link = repoUrl && c.pushed !== false ? `${repoUrl}/commit/${c.hash}` : null;
         return (
-          <li key={c.hash} className="flex items-center gap-3 px-4 py-2.5">
+          <li key={c.hash} className="flex items-center gap-3 px-5 py-3">
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] text-fg" title={c.subject}>
                 {c.subject}
@@ -81,9 +81,9 @@ function CommitRows({ commits, repoUrl }: { commits: GitHistory["commits"]; repo
 
 function Loading({ error }: { error: string | null }) {
   return error ? (
-    <p className="px-4 py-3 text-[13px] font-medium text-bad">{error}</p>
+    <p className="px-5 py-3.5 text-[13px] font-medium text-bad">{error}</p>
   ) : (
-    <p className="px-4 py-3 text-[13px] text-fg-3">Reading the log…</p>
+    <p className="px-5 py-3.5 text-[13px] text-fg-3">Reading the log…</p>
   );
 }
 
@@ -175,7 +175,7 @@ export default function HistoryPanel({
         <>
           <ul className="divide-y divide-line">
             {limited(data.branches).map((b) => (
-              <li key={b.name} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-[12.5px]">
+              <li key={b.name} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-[12.5px]">
                 <span className={`font-mono text-[13px] break-all ${b.current ? "font-semibold text-fg" : "text-fg"}`}>{b.name}</span>
                 {b.current && <Badge tone="info">Current</Badge>}
                 {b.gone ? (
@@ -203,7 +203,7 @@ export default function HistoryPanel({
         <>
           <ul className="divide-y divide-line">
             {limited(data.stashes).map((s) => (
-              <li key={s.index} className="flex items-baseline gap-3 px-4 py-2.5">
+              <li key={s.index} className="flex items-baseline gap-3 px-5 py-3">
                 <span className="shrink-0 font-mono text-[12px] text-fg-3">stash@{`{${s.index}}`}</span>
                 <p className="min-w-0 flex-1 text-[13px] wrap-break-word text-fg">{s.message}</p>
                 <span className="shrink-0 text-[12px] text-fg-3 tabular-nums">{ageShort(s.date)}</span>

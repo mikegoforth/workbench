@@ -21,6 +21,19 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.1.3",
+    changes: [
+      {
+        kind: "new",
+        text: "Color themes: Light, Paper, Dark, Dimmed and two high-contrast themes, or follow your system. Pick one from the palette button in the top bar; use the arrow keys to preview each before you choose.",
+      },
+      {
+        kind: "changed",
+        text: "A roomier, calmer layout: more space around cards and rows, softer corners, and a lighter top bar and sidebar.",
+      },
+    ],
+  },
+  {
     version: "0.1.2",
     date: "2026-11-09",
     changes: [

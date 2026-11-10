@@ -1,84 +1,217 @@
 @import "tailwindcss";
 
-/* dark: utilities follow the resolved theme on <html data-theme>, not the OS directly. */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* dark: utilities follow the theme's mode on <html data-mode>, not the OS directly. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
 
 /*
- * Cloud-console theme: white surfaces on light grey, grey hairlines, one blue
- * for actions, links, selection and focus; green / amber / red for status only.
+ * Color themes (picked in the top bar; see src/lib/theme.ts). Each theme sets
+ * the base colors below; the soft fills and borders of the brand and status
+ * colors are mixed from them in the shared block, so every theme gets a
+ * consistent set. One accent for actions, links, selection and focus; green,
+ * amber and red for status only.
  */
+
+/* Light: clean white panels on soft grey. Also the default before the theme script runs. */
 :root {
   color-scheme: light;
-  --bg: #f8f9fa;
-  --sidebar: #ffffff;
+  --bg: #f7f7f8;
+  --sidebar: #f7f7f8;
   --surface: #ffffff;
-  --subtle: #f8f9fa;
-  --hover: #f1f3f4;
-  --line: #dadce0;
-  --line-strong: #bdc1c6;
-  --fg: #202124;
-  --fg-2: #3c4043;
-  --fg-3: #5f6368;
+  --subtle: #f4f4f6;
+  --hover: #eeeef1;
+  --line: #e4e4e8;
+  --line-strong: #c9c9d0;
+  --fg: #1d1d20;
+  --fg-2: #3d3d45;
+  --fg-3: #66666f;
   --brand: #1a73e8;
   --brand-hover: #1765cc;
   --on-brand: #ffffff;
-  --brand-soft: #e8f0fe;
-  --brand-line: #aecbfa;
   --brand-text: #1967d2;
   --ok: #137333;
   --ok-dot: #1e8e3e;
-  --ok-soft: #e6f4ea;
-  --ok-line: #a8dab5;
-  --warn: #b06000;
+  --warn: #9a5800;
   --warn-dot: #f9ab00;
-  --warn-soft: #fef7e0;
-  --warn-line: #fde293;
   --bad: #c5221f;
   --bad-dot: #d93025;
-  --bad-soft: #fce8e6;
-  --bad-line: #f6aea9;
-  --term: #202124;
+  --term: #1d1d20;
   --term-fg: #e8eaed;
-  --shadow-card: 0 1px 2px 0 rgb(60 64 67 / 0.3), 0 1px 3px 1px rgb(60 64 67 / 0.15);
-  --shadow-bar: 0 1px 2px 0 rgb(60 64 67 / 0.3), 0 2px 6px 2px rgb(60 64 67 / 0.15);
-  --shadow-pop: 0 4px 8px 3px rgb(60 64 67 / 0.15), 0 1px 3px rgb(60 64 67 / 0.3);
+  --soft: 10%;
+  --edge: 34%;
+  --shadow-card: 0 1px 2px rgb(16 16 24 / 0.04), 0 1px 3px rgb(16 16 24 / 0.03);
+  --shadow-bar: 0 1px 0 rgb(16 16 24 / 0.04);
+  --shadow-pop: 0 16px 40px -12px rgb(16 16 24 / 0.22), 0 2px 8px rgb(16 16 24 / 0.08);
 }
 
+/* Paper: warm and low-glare. */
+:root[data-theme="paper"] {
+  color-scheme: light;
+  --bg: #f3eee4;
+  --sidebar: #efe8db;
+  --surface: #faf6ee;
+  --subtle: #f2ece1;
+  --hover: #ebe3d4;
+  --line: #e2d8c6;
+  --line-strong: #cbbda5;
+  --fg: #2f2a22;
+  --fg-2: #4d4538;
+  --fg-3: #6f6453;
+  --brand: #9a4a1c;
+  --brand-hover: #843e16;
+  --on-brand: #fffaf2;
+  --brand-text: #924618;
+  --ok: #3d6b21;
+  --ok-dot: #5a8f2e;
+  --warn: #835400;
+  --warn-dot: #c98a12;
+  --bad: #a8322d;
+  --bad-dot: #c4443d;
+  --term: #2f2a22;
+  --term-fg: #f3eee4;
+  --shadow-card: 0 1px 2px rgb(60 40 10 / 0.05), 0 1px 3px rgb(60 40 10 / 0.03);
+  --shadow-bar: 0 1px 0 rgb(60 40 10 / 0.05);
+  --shadow-pop: 0 16px 40px -12px rgb(60 40 10 / 0.25), 0 2px 8px rgb(60 40 10 / 0.1);
+}
+
+/* Dark: neutral charcoal, like a modern editor. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #1b1c1e;
-  --sidebar: #202124;
-  --surface: #202124;
-  --subtle: #28292c;
-  --hover: #303134;
-  --line: #3c4043;
-  --line-strong: #5f6368;
-  --fg: #e8eaed;
-  --fg-2: #bdc1c6;
-  --fg-3: #9aa0a6;
-  --brand: #8ab4f8;
-  --brand-hover: #aecbfa;
-  --on-brand: #202124;
-  --brand-soft: rgb(138 180 248 / 0.14);
-  --brand-line: rgb(138 180 248 / 0.4);
-  --brand-text: #8ab4f8;
-  --ok: #81c995;
-  --ok-dot: #81c995;
-  --ok-soft: rgb(129 201 149 / 0.14);
-  --ok-line: rgb(129 201 149 / 0.38);
-  --warn: #fdd663;
-  --warn-dot: #fdd663;
-  --warn-soft: rgb(253 214 99 / 0.13);
-  --warn-line: rgb(253 214 99 / 0.36);
+  --bg: #1b1b1d;
+  --sidebar: #18181a;
+  --surface: #222225;
+  --subtle: #27272b;
+  --hover: #2e2e33;
+  --line: #323238;
+  --line-strong: #4a4a52;
+  --fg: #e6e6ea;
+  --fg-2: #c2c2c8;
+  --fg-3: #9a9aa3;
+  --brand: #5b9df9;
+  --brand-hover: #7ab0fa;
+  --on-brand: #0b1220;
+  --brand-text: #82b4ff;
+  --ok: #7fd19a;
+  --ok-dot: #4cc276;
+  --warn: #f2c661;
+  --warn-dot: #e8b339;
   --bad: #f28b82;
-  --bad-dot: #f28b82;
-  --bad-soft: rgb(242 139 130 / 0.14);
-  --bad-line: rgb(242 139 130 / 0.4);
-  --term: #121314;
-  --term-fg: #e8eaed;
-  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.5), 0 1px 3px 1px rgb(0 0 0 / 0.3);
-  --shadow-bar: 0 1px 2px 0 rgb(0 0 0 / 0.6), 0 2px 6px 2px rgb(0 0 0 / 0.3);
-  --shadow-pop: 0 4px 8px 3px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.5);
+  --bad-dot: #ef6b61;
+  --term: #111113;
+  --term-fg: #e6e6ea;
+  --soft: 14%;
+  --edge: 40%;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-bar: 0 1px 0 rgb(0 0 0 / 0.35);
+  --shadow-pop: 0 20px 48px -12px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.4);
+}
+
+/* Dimmed: softer slate blue. */
+:root[data-theme="dimmed"] {
+  color-scheme: dark;
+  --bg: #22272e;
+  --sidebar: #1f242a;
+  --surface: #2a3038;
+  --subtle: #2f363f;
+  --hover: #353d47;
+  --line: #3b434e;
+  --line-strong: #545e6b;
+  --fg: #d3dbe4;
+  --fg-2: #b3bdc8;
+  --fg-3: #8f9aa7;
+  --brand: #6cb6ff;
+  --brand-hover: #8cc6ff;
+  --on-brand: #0d1b2a;
+  --brand-text: #7cbdff;
+  --ok: #7ee2a8;
+  --ok-dot: #57c78a;
+  --warn: #e5c07b;
+  --warn-dot: #d6a84d;
+  --bad: #ff8a80;
+  --bad-dot: #f06a62;
+  --term: #1a1f25;
+  --term-fg: #d3dbe4;
+  --soft: 14%;
+  --edge: 40%;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25);
+  --shadow-bar: 0 1px 0 rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 20px 48px -12px rgb(0 0 0 / 0.55), 0 2px 8px rgb(0 0 0 / 0.35);
+}
+
+/* High contrast: solid strong borders instead of tints, and an orange focus ring. */
+:root[data-theme="hc-light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --sidebar: #ffffff;
+  --surface: #ffffff;
+  --subtle: #f5f5f5;
+  --hover: #e6e6e6;
+  --line: #6b6b6b;
+  --line-strong: #000000;
+  --fg: #000000;
+  --fg-2: #000000;
+  --fg-3: #333333;
+  --brand: #0f4a85;
+  --brand-hover: #0b3866;
+  --on-brand: #ffffff;
+  --brand-text: #0f4a85;
+  --ok: #1e6b1e;
+  --ok-dot: #1e6b1e;
+  --warn: #7a4d00;
+  --warn-dot: #7a4d00;
+  --bad: #b5200d;
+  --bad-dot: #b5200d;
+  --term: #000000;
+  --term-fg: #ffffff;
+  --focus: #b5200d;
+  --soft: 0%;
+  --edge: 100%;
+  --shadow-card: none;
+  --shadow-bar: none;
+  --shadow-pop: 0 0 0 1px #000000;
+}
+
+:root[data-theme="hc-dark"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --sidebar: #000000;
+  --surface: #000000;
+  --subtle: #0b0b0b;
+  --hover: #1f1f1f;
+  --line: #8a8a8a;
+  --line-strong: #ffffff;
+  --fg: #ffffff;
+  --fg-2: #ffffff;
+  --fg-3: #d9d9d9;
+  --brand: #75beff;
+  --brand-hover: #a6d4ff;
+  --on-brand: #000000;
+  --brand-text: #7cc4ff;
+  --ok: #89d185;
+  --ok-dot: #89d185;
+  --warn: #ffcc66;
+  --warn-dot: #ffcc66;
+  --bad: #ff7b72;
+  --bad-dot: #ff7b72;
+  --term: #000000;
+  --term-fg: #ffffff;
+  --focus: #f38518;
+  --soft: 0%;
+  --edge: 100%;
+  --shadow-card: none;
+  --shadow-bar: none;
+  --shadow-pop: 0 0 0 1px #ffffff;
+}
+
+/* Mixed from each theme's base colors (custom properties resolve per theme on <html>). */
+:root {
+  --brand-soft: color-mix(in srgb, var(--brand) var(--soft), transparent);
+  --brand-line: color-mix(in srgb, var(--brand) var(--edge), transparent);
+  --ok-soft: color-mix(in srgb, var(--ok-dot) var(--soft), transparent);
+  --ok-line: color-mix(in srgb, var(--ok-dot) var(--edge), transparent);
+  --warn-soft: color-mix(in srgb, var(--warn-dot) var(--soft), transparent);
+  --warn-line: color-mix(in srgb, var(--warn-dot) var(--edge), transparent);
+  --bad-soft: color-mix(in srgb, var(--bad-dot) var(--soft), transparent);
+  --bad-line: color-mix(in srgb, var(--bad-dot) var(--edge), transparent);
 }
 
 @theme inline {
@@ -119,6 +252,15 @@
   --font-mono: var(--font-roboto-mono), ui-monospace, "SF Mono", monospace;
 }
 
+/* Softer corners everywhere: controls 8px, cards and dialogs 12px. */
+@theme {
+  --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
 /* Dialogs settle in from just below: short, eased out, and skipped under reduced motion (motion-safe:). */
 @theme {
   --animate-dialog-in: dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -154,8 +296,17 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--focus, var(--brand));
     outline-offset: 2px;
+  }
+
+  /* High contrast has no tinted fills, so the current page, the chosen row and
+     the selected tab get an outline instead, as in VS Code's high-contrast themes. */
+  :root[data-theme^="hc-"] [aria-current="page"],
+  :root[data-theme^="hc-"] [role="option"][aria-selected="true"],
+  :root[data-theme^="hc-"] [role="tab"][aria-selected="true"] {
+    outline: 1px dashed var(--focus);
+    outline-offset: -1px;
   }
 
   input::placeholder,

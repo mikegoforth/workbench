@@ -173,11 +173,11 @@ export default function ProjectsFolder({
         }
       >
         {scanError && (
-          <p role="alert" className="px-4 py-3 text-[13px] text-bad">
+          <p role="alert" className="px-5 py-3.5 text-[13px] text-bad">
             {scanError}
           </p>
         )}
-        {busy && !scan && <p className="px-4 py-3 text-[13px] text-fg-3">Scanning your home folder…</p>}
+        {busy && !scan && <p className="px-5 py-3.5 text-[13px] text-fg-3">Scanning your home folder…</p>}
         {scan && scan.roots.length === 0 && (
           <EmptyState icon={FolderSearch} title="No git repositories found">
             Type the folder&apos;s path above instead.
@@ -199,7 +199,7 @@ export default function ProjectsFolder({
                 />
               ))}
             </ul>
-            <p className="border-t border-line px-4 py-2 text-[12.5px] text-fg-3">
+            <p className="border-t border-line px-5 py-2.5 text-[12.5px] text-fg-3">
               Checked {scan.scannedDirs.toLocaleString()} folders in {(scan.elapsedMs / 1000).toFixed(1)} s.
               {scan.truncated && " Stopped early, so folders deep in your home folder may be missing."}
             </p>
@@ -231,7 +231,7 @@ function RootRow({
   const names = root.github.length > 0 ? root.github : root.repos;
   const shown = expanded ? names : names.slice(0, SAMPLE);
   return (
-    <li className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3">
+    <li className="flex flex-wrap items-start gap-x-4 gap-y-2 px-5 py-3.5">
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[13px] break-all text-fg">{root.display}</p>
         <p className="mt-0.5 text-[12.5px] text-fg-2">
