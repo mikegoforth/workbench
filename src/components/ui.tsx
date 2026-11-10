@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import type { Reason } from "@/lib/attention";
 import { SEVERITY_TONE, type Status, type Tone } from "@/lib/status";
-import type { OverviewEntry } from "@/lib/types";
+import type { CheckState, OverviewEntry } from "@/lib/types";
 import { useShortcut } from "@/lib/useShortcut";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
@@ -207,7 +207,12 @@ export function SyncValue({ ahead, behind }: { ahead: number; behind: number }) 
 export function CiBadge({ github, loaded }: { github: OverviewEntry["github"] | undefined; loaded: boolean }) {
   if (!loaded) return <span className="text-[13px] text-fg-3">Checking</span>;
   if (!github) return <span className="text-[13px] text-fg-3" title="Not on GitHub">—</span>;
-  switch (github.ci) {
+  return <ChecksBadge state={github.ci} />;
+}
+
+/** A commit's combined checks, in the same words everywhere: Passing, Failing, In progress, No checks. */
+export function ChecksBadge({ state }: { state: CheckState | null }) {
+  switch (state) {
     case "SUCCESS":
       return <Badge tone="ok" dot>Passing</Badge>;
     case "FAILURE":
@@ -577,15 +582,18 @@ export function FilterBar({
   value,
   onChange,
   placeholder = "Enter property name or value",
+  className = "border-b border-line",
   children,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Defaults to a bottom border, for sitting on top of a table. */
+  className?: string;
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-5 py-3">
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 ${className}`}>
       <label className="flex h-8 min-w-56 flex-1 items-center gap-2 text-[13px]">
         <ListFilter aria-hidden size={17} strokeWidth={2} className="shrink-0 text-fg-2" />
         <span className="shrink-0 font-medium text-fg-2">Filter</span>

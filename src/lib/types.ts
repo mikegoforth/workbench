@@ -239,6 +239,48 @@ export interface GitHubStatus {
   fetchedAt: string;
 }
 
+// ---- Pull requests (/api/pull-requests) ----
+
+export interface PullRequestRow {
+  /** owner/name */
+  repo: string;
+  /** https://github.com/owner/name */
+  repoUrl: string;
+  number: number;
+  title: string;
+  url: string;
+  draft: boolean;
+  author: string | null;
+  updatedAt: string;
+  reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  /** CI on the PR's latest commit. */
+  checks: CheckState | null;
+}
+
+export interface PullRequestList {
+  items: PullRequestRow[];
+  /** GitHub's count for the search, before PRs an earlier section shows are left out. */
+  total: number;
+  /** GitHub has more than one page of these. */
+  truncated: boolean;
+}
+
+export interface PullRequests {
+  /** The gh login these are for. */
+  viewer: string;
+  /** Review requested from you or a team you're in. */
+  review: PullRequestList;
+  /** Opened by you (minus any already under review). */
+  authored: PullRequestList;
+  /** Assigned to you (minus any listed above). */
+  assigned: PullRequestList;
+  /** Part of the result couldn't be read (e.g. an org that needs SSO); the rest is here. */
+  warning: string | null;
+  fetchedAt: string;
+}
+
+export type PullRequestsErrorReason = "missing" | "signed-out" | "rate-limited" | "failed";
+
 // ---- Scripts (/api/scripts) ----
 
 export interface ScriptStatus {

@@ -25,6 +25,10 @@ export const RELEASES: Release[] = [
     changes: [
       {
         kind: "new",
+        text: "Pull requests: every open pull request across GitHub that's waiting on your review or is yours, with its checks and review state, in one place. The sidebar counts the ones waiting on you, and a PR in a repo you have locally links to its project.",
+      },
+      {
+        kind: "new",
         text: "Color themes: Light, Paper, Dark, Dimmed and two high-contrast themes, or follow your system. Pick one from the palette button in the top bar; use the arrow keys to preview each before you choose.",
       },
       {

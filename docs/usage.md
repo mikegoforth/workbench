@@ -6,6 +6,7 @@
 - **Projects**: one table of every project, with status, branch, ahead/behind, uncommitted changes, CI and issues. You can filter, sort and hide projects.
 - **Running**: everything running for any project, including compose stacks started outside workbench. Stop or restart from here.
 - **Needs attention**: failing CI, merge conflicts, review requests, branches behind or ahead, and failing containers (unhealthy, crash-looping, or exited with an error). Park a project to acknowledge its issues until they change.
+- **Pull requests**: every open pull request across GitHub that's waiting on your review (asked of you or a team you're on), opened by you, or assigned to you, with draft, checks, review decision and when it was last updated. Each links to GitHub, and to the project's page when you have the repo locally. The sidebar count is how many wait on your review. Needs `gh auth login`.
 - **Activity** and **Todos**: the latest commit in each project, and todos from every project.
 - **A project's page**:
   - Details: notes and todos, git and CI state, what needs attention, and changed files.
