@@ -119,6 +119,68 @@ export interface ContainerProblem {
   exitCode: number | null;
 }
 
+/** One container on the Containers page (/api/containers). */
+export interface ContainerRow {
+  /** Full container id. */
+  id: string;
+  name: string;
+  image: string;
+  /** Docker's state: running, exited, restarting, paused, created, dead. */
+  state: string;
+  health: DevService["health"];
+  exitCode: number | null;
+  oomKilled: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  /** Host ports it publishes on localhost. */
+  ports: number[];
+  /** Compose service, if Compose created it. */
+  service: string | null;
+  /** Why it needs a look, by the same rules as Needs attention; null if it doesn't. */
+  problem: ContainerProblem["kind"] | null;
+}
+
+export interface ContainerStackGroup {
+  /** Compose project name; null for containers Compose didn't create. */
+  name: string | null;
+  /**
+   * Where it runs from: for a project's stack, the folder relative to the
+   * project ("" for its root), as the stack actions expect; for other
+   * containers, the folder with the home folder shortened to ~ (null if unknown).
+   */
+  dir: string | null;
+  containers: ContainerRow[];
+}
+
+export interface ContainerGroup {
+  /** The workbench project; null for containers that belong to none. */
+  project: string | null;
+  stacks: ContainerStackGroup[];
+}
+
+export interface ContainersList {
+  docker: DockerDaemon;
+  /** Problems first, then groups with something running, then by name; "no project" last among equals. */
+  groups: ContainerGroup[];
+}
+
+/** CPU and memory of a running container, from `docker stats --no-stream`. */
+export interface ContainerUsage {
+  /** Percent of one CPU (can pass 100 on several cores); null if Docker didn't say. */
+  cpu: number | null;
+  /** Bytes in use and the container's limit (the machine's memory when unlimited). */
+  memory: number | null;
+  memoryLimit: number | null;
+}
+
+export interface ContainersUsage {
+  /** When it was measured. */
+  at: string;
+  /** By full container id; running containers only. */
+  usage: Record<string, ContainerUsage>;
+  error: string | null;
+}
+
 /** One line of container output (/api/docker/logs). */
 export interface ContainerLogLine {
   ts: string;
