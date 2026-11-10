@@ -32,8 +32,8 @@ describe("RELEASES", () => {
     expect(release.changes.length).toBeGreaterThan(0);
     for (const change of release.changes) {
       expect(["new", "changed", "fixed", "security"]).toContain(change.kind);
-      // Full sentences for people, not commit subjects.
-      expect(change.text).toMatch(/^[A-Z].*\.$/);
+      // Full sentences for people, not commit subjects (the product name stays lowercase).
+      expect(change.text).toMatch(/^([A-Z]|workbench\b).*\.$/);
     }
   });
 });

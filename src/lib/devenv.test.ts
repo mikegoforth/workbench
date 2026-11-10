@@ -56,6 +56,12 @@ import {
 } from "./devenv";
 
 const LSTART = "Mon Nov  9 10:00:00 2026";
+
+// Process identity differs per platform (ps on macOS, /proc on Linux), so the
+// platform is pinned to macOS unless a test says otherwise.
+const realPlatform = process.platform;
+const setPlatform = (platform: NodeJS.Platform) =>
+  Object.defineProperty(process, "platform", { value: platform, configurable: true });
 const RUNNING: DockerDaemon = { state: "running", message: null, app: null };
 
 const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workbench-devenv-")));
@@ -233,11 +239,13 @@ beforeEach(() => {
   vi.mocked(dockerSnapshot).mockReset().mockResolvedValue({ daemon: RUNNING, containers: [] });
   vi.mocked(invalidateDocker).mockReset();
   vi.mocked(runChecks).mockClear();
+  setPlatform("darwin");
 });
 
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  setPlatform(realPlatform);
 });
 
 afterAll(() => {
@@ -281,6 +289,37 @@ describe("devEnv", () => {
     vi.stubEnv("HOME", "/Users/me");
     vi.stubEnv("MY_PROJECT_SETTING", "1");
     expect(devEnv()).toMatchObject({ PATH: "/usr/bin:/bin", HOME: "/Users/me", MY_PROJECT_SETTING: "1" });
+  });
+
+  describe("inside workbench's AppImage", () => {
+    const appDir = "/tmp/.mount_workbeXYZ";
+
+    it("drops the AppImage's own variables", () => {
+      vi.stubEnv("APPIMAGE", "/home/me/Apps/workbench.AppImage");
+      vi.stubEnv("APPDIR", appDir);
+      vi.stubEnv("ARGV0", "workbench.AppImage");
+      vi.stubEnv("OWD", "/home/me");
+      const env = devEnv();
+      for (const key of ["APPIMAGE", "APPDIR", "ARGV0", "OWD"]) expect(env).not.toHaveProperty(key);
+    });
+
+    it("keeps only the user's own library folders", () => {
+      vi.stubEnv("APPDIR", appDir);
+      vi.stubEnv("LD_LIBRARY_PATH", `${appDir}/usr/lib:/opt/cuda/lib64::${appDir}`);
+      expect(devEnv().LD_LIBRARY_PATH).toBe("/opt/cuda/lib64");
+    });
+
+    it("removes LD_LIBRARY_PATH when every folder was the AppImage's", () => {
+      vi.stubEnv("APPDIR", appDir);
+      vi.stubEnv("LD_LIBRARY_PATH", `${appDir}/usr/lib`);
+      expect(devEnv()).not.toHaveProperty("LD_LIBRARY_PATH");
+    });
+
+    it("leaves LD_LIBRARY_PATH alone outside an AppImage", () => {
+      vi.stubEnv("APPDIR", "");
+      vi.stubEnv("LD_LIBRARY_PATH", "/opt/lib");
+      expect(devEnv().LD_LIBRARY_PATH).toBe("/opt/lib");
+    });
   });
 });
 
@@ -1038,5 +1077,82 @@ describe("runningProjects", () => {
       beta: [{ stack: "beta", service: "worker", kind: "exited", exitCode: 1 }],
     });
     expect(result.docker).toEqual(stopped);
+  });
+});
+
+describe("on Linux", () => {
+  // /proc as far as devenv can tell: each live fake process (procs) has a stat
+  // line whose start ticks stand for its start time.
+  const BOOT = "454f4c74-22cd-42ac-9a76-a280f7013a0c";
+  const ticksOf = (lstart: string) => (lstart === LSTART ? "8812345" : "9900000");
+  const OURS = `${BOOT}:8812345`;
+
+  beforeEach(() => {
+    setPlatform("linux");
+    const realRead = fs.readFileSync;
+    vi.spyOn(fs, "readFileSync").mockImplementation(((file: fs.PathOrFileDescriptor, options?: unknown) => {
+      if (file === "/proc/sys/kernel/random/boot_id") return `${BOOT}\n`;
+      const pid = String(file).match(/^\/proc\/(\d+)\/stat$/)?.[1];
+      if (pid) {
+        const lstart = procs.get(Number(pid));
+        if (!lstart) throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+        return `${pid} (npm run dev) S 1 ${pid} ${pid} 0 -1 4194560 100 0 0 0 1 0 0 0 20 0 1 0 ${ticksOf(lstart)} 2437120 167 18446744073709551615\n`;
+      }
+      return realRead(file, options as BufferEncoding);
+    }) as typeof fs.readFileSync);
+  });
+
+  it("saves the process's boot id and start ticks, without running ps", async () => {
+    writeFiles({ "package.json": packageJson({ dev: "vite" }) });
+    await start("alpha", dir);
+    expect(readJson(devFile("alpha.json"))).toMatchObject({ pid: 4242, lstart: OURS, kind: "dev" });
+    expect(mocks.execFile.mock.calls.some((c) => c[0] === "ps")).toBe(false);
+    expect(mocks.spawn.mock.lastCall?.[0]).toBe("/bin/sh");
+  });
+
+  it("knows a process it started is still running", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev", lstart: OURS });
+    expect(await getStatus("alpha", dir)).toMatchObject({ processRunning: true, task: "dev" });
+  });
+
+  it("ignores a saved pid that now belongs to another process", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev", lstart: OURS }, false);
+    procs.set(501, "a later process");
+    expect((await getStatus("alpha", dir)).processRunning).toBe(false);
+  });
+
+  it("doesn't recognise a ps-style start time", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev", lstart: LSTART });
+    expect((await getStatus("alpha", dir)).processRunning).toBe(false);
+  });
+
+  it("stops the process group of a process it started", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev", lstart: OURS });
+    await stop("alpha", dir);
+    expect(process.kill).toHaveBeenCalledWith(-501, "SIGTERM");
+    expect(fs.existsSync(devFile("alpha.json"))).toBe(false);
+  });
+
+  it("lists projects whose processes are still ours, reading /proc instead of ps", async () => {
+    const write = (slot: "dev" | "script", name: string, content: object) => {
+      const folder = slot === "dev" ? devFile() : devFile("scripts");
+      fs.mkdirSync(folder, { recursive: true });
+      fs.writeFileSync(path.join(folder, `${name}.json`), JSON.stringify(content));
+    };
+    write("dev", "alpha", { pid: 11, lstart: OURS });
+    write("script", "beta", { pid: 12, lstart: OURS });
+    write("dev", "gamma", { pid: 13, lstart: OURS }); // gone
+    write("dev", "delta", { pid: 14, lstart: OURS }); // pid reused
+    procs.set(11, LSTART);
+    procs.set(12, LSTART);
+    procs.set(14, "a later process");
+
+    const result = await runningProjects();
+
+    expect(result.projects).toEqual([
+      { name: "alpha", ports: [] },
+      { name: "beta", ports: [] },
+    ]);
+    expect(mocks.execFile).not.toHaveBeenCalled();
   });
 });

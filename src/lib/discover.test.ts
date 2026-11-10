@@ -126,7 +126,11 @@ describe("discoverProjectRoots", () => {
   });
 
   it("skips Library, media, Desktop, Downloads and the Go module cache, only at the top", async () => {
-    for (const skipped of ["Library", "Applications", "Pictures", "Music", "Movies", "Public", "Desktop", "Downloads", "go/pkg/mod"]) {
+    for (const skipped of [
+      "Library", "Applications", "Pictures", "Music", "Movies", "Public", "Desktop", "Downloads", "go/pkg/mod",
+      // Linux
+      "snap", "Videos", "Android/Sdk",
+    ]) {
       repo(`${skipped}/repo`);
     }
     repo("go/src/tool");

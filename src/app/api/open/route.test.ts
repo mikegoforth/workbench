@@ -4,18 +4,29 @@ import path from "path";
 import { NextRequest } from "next/server";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// execFile is mocked: neither VS Code nor Terminal is launched. Each call is
-// recorded and answered with `outcome(cmd)`: null for success, or an error.
-const child = vi.hoisted(() => {
+// execFile and spawn are mocked: neither VS Code nor any terminal is launched.
+// Each execFile call is recorded and answered with `outcome(cmd)`: null for
+// success, or an error. Each spawn hands back a fake child that reports
+// "spawn" (or `spawnError`) on the next tick.
+const child = await vi.hoisted(async () => {
+  const { EventEmitter } = await import("events");
   const outcome = vi.fn<(cmd: string) => Error | null>(() => null);
   const execFile = vi.fn((cmd: string, _args: string[], _opts: object, cb: (e: Error | null, out?: string, err?: string) => void) => {
     cb(outcome(cmd), "", "");
   });
-  return { execFile, outcome };
+  const state = { spawnError: null as Error | null, unref: vi.fn() };
+  const spawn = vi.fn<(cmd: string, args: string[], opts: object) => InstanceType<typeof EventEmitter>>(() => {
+    const proc = Object.assign(new EventEmitter(), { unref: state.unref });
+    const error = state.spawnError;
+    process.nextTick(() => (error ? proc.emit("error", error) : proc.emit("spawn")));
+    return proc;
+  });
+  return { execFile, outcome, spawn, state };
 });
 vi.mock("child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("child_process")>();
-  return { ...actual, default: { ...actual, execFile: child.execFile }, execFile: child.execFile };
+  const overrides = { execFile: child.execFile, spawn: child.spawn };
+  return { ...actual, ...overrides, default: { ...actual, ...overrides } };
 });
 
 import { POST } from "./route";
@@ -27,6 +38,25 @@ fs.mkdirSync(path.join(alpha, "src"), { recursive: true });
 fs.mkdirSync(path.join(projects, ".hidden"));
 fs.writeFileSync(path.join(alpha, "src", "index.ts"), "");
 fs.writeFileSync(path.join(root, "outside.txt"), "");
+
+// Fake terminals for PATH lookups: executable files that are never run.
+const bin = path.join(root, "bin");
+const otherBin = path.join(root, "other-bin");
+fs.mkdirSync(bin);
+fs.mkdirSync(otherBin);
+function install(dir: string, name: string, mode = 0o755) {
+  const file = path.join(dir, name);
+  fs.writeFileSync(file, "#!/bin/sh\n");
+  fs.chmodSync(file, mode);
+  return file;
+}
+function uninstallAll() {
+  for (const dir of [bin, otherBin]) for (const f of fs.readdirSync(dir)) fs.rmSync(path.join(dir, f), { recursive: true });
+}
+
+/** Paths that exist as far as the VS Code fallback can tell. */
+const LINUX_CODE = ["/usr/bin/code", "/snap/bin/code", "/usr/share/code/bin/code"];
+let existing = new Set<string>();
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
   new NextRequest("http://localhost:3000/api/open", {
@@ -42,18 +72,29 @@ const setPlatform = (platform: NodeJS.Platform) =>
   Object.defineProperty(process, "platform", { value: platform, configurable: true });
 
 const commands = () => child.execFile.mock.calls.map(([cmd, args]) => [cmd, args]);
+const spawned = () => child.spawn.mock.calls.map(([cmd, args]) => [cmd, args]);
 
 beforeEach(() => {
   child.execFile.mockClear();
   child.outcome.mockReset();
   child.outcome.mockReturnValue(null);
+  child.spawn.mockClear();
+  child.state.unref.mockClear();
+  child.state.spawnError = null;
   vi.stubEnv("WORKBENCH_DATA_DIR", path.join(root, "data"));
   vi.stubEnv("WORKBENCH_PROJECTS_DIR", projects);
   vi.stubEnv("WORKBENCH_API_TOKEN", "");
+  vi.stubEnv("PATH", [bin, otherBin].join(path.delimiter));
+  vi.stubEnv("TERMINAL", "");
+  uninstallAll();
+  existing = new Set();
+  const realExists = fs.existsSync;
+  vi.spyOn(fs, "existsSync").mockImplementation((p) => (LINUX_CODE.includes(String(p)) ? existing.has(String(p)) : realExists(p)));
   setPlatform("darwin");
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   setPlatform(realPlatform);
 });
 
@@ -67,7 +108,18 @@ describe("POST /api/open in VS Code", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
     expect(commands()).toEqual([["code", [alpha]]]);
-    expect(child.execFile.mock.calls[0][2]).toEqual({ timeout: 10_000 });
+    expect(child.execFile.mock.calls[0][2]).toMatchObject({ timeout: 10_000 });
+  });
+
+  // Every WORKBENCH_ variable (the API token among them) and workbench's own PORT stay behind.
+  it("doesn't hand VS Code workbench's own settings", async () => {
+    vi.stubEnv("PORT", "61171");
+    await POST(post({ projectName: "alpha" }));
+    const env = (child.execFile.mock.calls[0][2] as { env: NodeJS.ProcessEnv }).env;
+    expect(env).not.toHaveProperty("WORKBENCH_DATA_DIR");
+    expect(env).not.toHaveProperty("WORKBENCH_PROJECTS_DIR");
+    expect(env).not.toHaveProperty("PORT");
+    expect(env.PATH).toBe(process.env.PATH);
   });
 
   it("opens a file in the project's window", async () => {
@@ -99,6 +151,35 @@ describe("POST /api/open in VS Code", () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Couldn't open VS Code: spawn code ENOENT" });
     expect(commands()).toEqual([["code", [alpha]]]);
+  });
+
+  it.each(LINUX_CODE)("falls back to %s on Linux when code isn't on PATH", async (cli) => {
+    setPlatform("linux");
+    existing.add(cli);
+    child.outcome.mockImplementation((cmd) => (cmd === "code" ? enoent() : null));
+    const res = await POST(post({ projectName: "alpha", file: "src/index.ts" }));
+    expect(res.status).toBe(200);
+    expect(commands()).toEqual([
+      ["code", [alpha, path.join(alpha, "src", "index.ts")]],
+      [cli, [alpha, path.join(alpha, "src", "index.ts")]],
+    ]);
+  });
+
+  it("uses the first Linux location that exists, with just the folder", async () => {
+    setPlatform("linux");
+    existing.add("/snap/bin/code").add("/usr/share/code/bin/code");
+    child.outcome.mockImplementation((cmd) => (cmd === "code" ? enoent() : null));
+    await POST(post({ projectName: "alpha" }));
+    expect(commands()[1]).toEqual(["/snap/bin/code", [alpha]]);
+  });
+
+  it("doesn't fall back on Windows", async () => {
+    setPlatform("win32");
+    existing.add("/usr/bin/code");
+    child.outcome.mockImplementation(() => enoent());
+    const res = await POST(post({ projectName: "alpha" }));
+    expect(res.status).toBe(500);
+    expect(commands()).toHaveLength(1);
   });
 
   it("doesn't fall back when code fails for another reason", async () => {
@@ -139,11 +220,20 @@ describe("POST /api/open in Terminal", () => {
     expect(commands()).toEqual([["open", ["-a", "Terminal", alpha]]]);
   });
 
-  it("501s off macOS", async () => {
-    setPlatform("linux");
+  it("never looks for Linux terminals on macOS", async () => {
+    install(bin, "gnome-terminal");
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(child.spawn).not.toHaveBeenCalled();
+  });
+
+  it("501s on Windows", async () => {
+    setPlatform("win32");
+    install(bin, "xterm");
     const res = await POST(post({ projectName: "alpha", app: "terminal" }));
     expect(res.status).toBe(501);
+    expect(await res.json()).toEqual({ error: "Open in Terminal only works on macOS and Linux" });
     expect(child.execFile).not.toHaveBeenCalled();
+    expect(child.spawn).not.toHaveBeenCalled();
   });
 
   it("reports a failure", async () => {
@@ -151,6 +241,131 @@ describe("POST /api/open in Terminal", () => {
     const res = await POST(post({ projectName: "alpha", app: "terminal" }));
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Couldn't open Terminal: not allowed" });
+  });
+});
+
+describe("POST /api/open in a terminal on Linux", () => {
+  beforeEach(() => {
+    setPlatform("linux");
+  });
+
+  it("launches the terminal detached in the project folder, without a shell or workbench's settings", async () => {
+    const gnome = install(bin, "gnome-terminal");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DISPLAY", ":0");
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(spawned()).toEqual([[gnome, [`--working-directory=${alpha}`]]]);
+    const opts = child.spawn.mock.calls[0][2] as { cwd: string; detached: boolean; stdio: string; env: NodeJS.ProcessEnv; shell?: boolean };
+    expect(opts).toMatchObject({ cwd: alpha, detached: true, stdio: "ignore" });
+    expect(opts.shell).toBeUndefined();
+    expect(opts.env.DISPLAY).toBe(":0");
+    expect(opts.env).not.toHaveProperty("WORKBENCH_PROJECTS_DIR");
+    expect(opts.env).not.toHaveProperty("NODE_ENV");
+    expect(child.state.unref).toHaveBeenCalled();
+    expect(child.execFile).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["x-terminal-emulator", []],
+    ["gnome-terminal", ["--working-directory=DIR"]],
+    ["konsole", ["--workdir", "DIR"]],
+    ["xfce4-terminal", ["--working-directory=DIR"]],
+    ["kitty", ["--directory", "DIR"]],
+    ["alacritty", ["--working-directory", "DIR"]],
+    ["wezterm", ["start", "--cwd", "DIR"]],
+    ["foot", ["--working-directory=DIR"]],
+    ["ptyxis", ["--working-directory=DIR"]],
+    ["kgx", ["--working-directory=DIR"]],
+    ["tilix", ["--working-directory=DIR"]],
+    ["terminator", ["--working-directory=DIR"]],
+    ["xterm", []],
+  ])("opens %s in the folder", async (name, args) => {
+    const file = install(bin, name);
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(spawned()).toEqual([[file, args.map((a) => a.replace("DIR", alpha))]]);
+    expect(child.spawn.mock.calls[0][2]).toMatchObject({ cwd: alpha });
+  });
+
+  it("tries terminals in order, across PATH", async () => {
+    install(bin, "xterm");
+    install(bin, "kitty");
+    const konsole = install(otherBin, "konsole");
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(spawned()).toEqual([[konsole, ["--workdir", alpha]]]);
+  });
+
+  it("prefers $TERMINAL, with that terminal's arguments", async () => {
+    install(bin, "x-terminal-emulator");
+    const kitty = install(otherBin, "kitty");
+    vi.stubEnv("TERMINAL", "kitty");
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(spawned()).toEqual([[kitty, ["--directory", alpha]]]);
+  });
+
+  it("accepts $TERMINAL as a full path to a terminal it doesn't know", async () => {
+    install(bin, "xterm");
+    const mine = install(root, "my-term");
+    vi.stubEnv("TERMINAL", mine);
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(spawned()).toEqual([[mine, []]]);
+    expect(child.spawn.mock.calls[0][2]).toMatchObject({ cwd: alpha });
+  });
+
+  it.each([
+    ["isn't installed", "nope-term"],
+    ["is a relative path", "bin/xterm"],
+    ["holds arguments", "xterm -e bash"],
+  ])("falls back when $TERMINAL %s", async (_label, value) => {
+    const xterm = install(bin, "xterm");
+    vi.stubEnv("TERMINAL", value);
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(spawned()).toEqual([[xterm, []]]);
+  });
+
+  it("skips files that aren't executable, folders and relative PATH entries", async () => {
+    install(bin, "gnome-terminal", 0o644);
+    fs.mkdirSync(path.join(bin, "konsole"));
+    vi.stubEnv("PATH", ["relative-bin", "", bin, otherBin].join(path.delimiter));
+    const xterm = install(otherBin, "xterm");
+    await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(spawned()).toEqual([[xterm, []]]);
+  });
+
+  it("501s when no terminal is installed", async () => {
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(501);
+    expect(await res.json()).toEqual({
+      error: "No terminal app found. Install one (such as GNOME Terminal, Konsole or xterm), or set $TERMINAL to yours.",
+    });
+    expect(child.spawn).not.toHaveBeenCalled();
+  });
+
+  it("501s with no PATH at all", async () => {
+    install(bin, "xterm");
+    vi.stubEnv("PATH", undefined);
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(501);
+  });
+
+  it("reports a terminal that fails to start", async () => {
+    install(bin, "xterm");
+    child.state.spawnError = Object.assign(new Error("spawn xterm EACCES"), { code: "EACCES" });
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Couldn't open a terminal: spawn xterm EACCES" });
+    expect(child.state.unref).not.toHaveBeenCalled();
+  });
+
+  it("passes a folder with spaces and quotes as one argument", async () => {
+    const odd = path.join(projects, `it's "odd" $(x)`);
+    fs.mkdirSync(odd, { recursive: true });
+    const gnome = install(bin, "gnome-terminal");
+    const res = await POST(post({ projectName: path.basename(odd), app: "terminal" }));
+    expect(res.status).toBe(200);
+    expect(spawned()).toEqual([[gnome, [`--working-directory=${odd}`]]]);
+    fs.rmSync(odd, { recursive: true });
   });
 });
 

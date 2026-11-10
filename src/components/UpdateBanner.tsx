@@ -45,7 +45,7 @@ export default function UpdateBanner() {
         <span className="text-fg-2">
           {status.state === "ready"
             ? "Restarting takes a few seconds. Running dev servers keep running."
-            : `You have ${status.current}. Download it and replace the app in Applications.`}
+            : `You have ${status.current}. Download it and install it in place of this one.`}
         </span>
       </p>
       {status.state === "ready" ? (

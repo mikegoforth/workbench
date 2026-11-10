@@ -335,7 +335,8 @@ async function setupUpdates() {
   }
   const current = app.getVersion();
   const install = await canInstallUpdates();
-  log(`[update] ${install ? "signed with a Developer ID: updates install themselves" : "not Developer ID signed: updates link to their download"}`);
+  const why = process.platform === "darwin" ? (install ? "signed with a Developer ID" : "not Developer ID signed") : install ? "running as an AppImage" : "not an AppImage";
+  log(`[update] ${why}: updates ${install ? "install themselves" : "link to their download"}`);
 
   autoUpdater.autoDownload = install;
   autoUpdater.autoInstallOnAppQuit = install;

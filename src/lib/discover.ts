@@ -21,12 +21,15 @@ const SKIP_NAMES = new Set([
 ]);
 
 /**
- * Top-level home folders that are skipped. Library and the media folders are
- * huge and hold no projects; Desktop and Downloads are left out so a scan
- * never triggers a macOS privacy prompt. ~/go/pkg is the Go module cache.
+ * Top-level home folders that are skipped, on every platform. Library and the
+ * media folders are huge and hold no projects; Desktop and Downloads are left
+ * out so a scan never triggers a macOS privacy prompt. ~/go/pkg is the Go
+ * module cache. On Linux: snap (each snap's data, per revision), Videos, and
+ * the Android SDK.
  */
 const SKIP_IN_HOME = new Set([
   "Library", "Applications", "Pictures", "Music", "Movies", "Public", "Desktop", "Downloads", path.join("go", "pkg"),
+  "snap", "Videos", path.join("Android", "Sdk"),
 ]);
 
 /** Remote URLs from a git config file, origin first. */

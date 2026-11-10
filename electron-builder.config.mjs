@@ -103,6 +103,10 @@ const config = {
   appImage: {
     artifactName: "${productName}-${version}-${arch}.${ext}",
   },
+  // The static AppImage runtime. The default (legacy) one needs libfuse2 and an
+  // unversioned libz.so, which stock Ubuntu 24.04 and other current distros
+  // don't have, so the AppImage wouldn't even start there.
+  toolsets: { appimage: "1.0.3" },
   dmg: {
     // Name both by chip (arm64, x64): by default the Intel one has no suffix,
     // which is easy to mistake for the only download. The zips keep the

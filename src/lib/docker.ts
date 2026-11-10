@@ -3,6 +3,7 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { projectsDir } from "./paths";
+import { dockerApp, dockerManualStart, platform } from "./platform";
 import type {
   ComposeStack,
   ContainerLogLine,
@@ -66,29 +67,39 @@ export function dockerMessage(e: unknown): string {
 
 // ---- Daemon ----------------------------------------------------------------
 
-const APP: DockerDaemon["app"] = fs.existsSync("/Applications/Docker.app")
-  ? "Docker"
-  : fs.existsSync("/Applications/OrbStack.app")
-    ? "OrbStack"
-    : null;
-
-const RUNNING: DockerDaemon = { state: "running", message: null, app: APP };
-
 /** Turn a failed docker call into what the UI should say about the daemon. */
 export function daemonFromError(e: unknown): DockerDaemon {
   const err = e as NodeJS.ErrnoException;
-  if (err.code === "ENOENT") return { state: "missing", message: "The Docker CLI isn't installed (or isn't on PATH).", app: APP };
+  // Which app can start Docker is checked each time, so installing one is noticed without a restart.
+  const app = dockerApp()?.name ?? null;
+  if (err.code === "ENOENT") return { state: "missing", message: "The Docker CLI isn't installed (or isn't on PATH).", app };
   const message = dockerMessage(e);
-  if (/cannot connect to the docker daemon|is the docker daemon running|docker\.sock|error during connect|connection refused/i.test(message)) {
-    return { state: "stopped", message: "Docker isn't running.", app: APP };
+  // Linux: the daemon is up, but this user isn't allowed to use its socket.
+  if (platform() === "linux" && /permission denied/i.test(message) && /docker\.sock/i.test(message)) {
+    return {
+      state: "error",
+      message: "Docker is running, but you don't have permission to use it. Add yourself to the docker group (sudo usermod -aG docker $USER), then log out and back in.",
+      app,
+    };
   }
-  return { state: "error", message, app: APP };
+  if (/cannot connect to the docker daemon|is the docker daemon running|docker\.sock|error during connect|connection refused/i.test(message)) {
+    // Docker Engine on Linux has no app to launch: say how to start it instead.
+    const manual = app ? null : dockerManualStart();
+    return manual
+      ? { state: "stopped", message: `Docker isn't running. Start it in a terminal: ${manual}`, app, startCommand: manual }
+      : { state: "stopped", message: "Docker isn't running.", app };
+  }
+  return { state: "error", message, app };
 }
 
 /** Launch Docker Desktop (or OrbStack); the daemon comes up a little later. */
 export async function startDaemon(): Promise<void> {
-  if (!APP) throw new Error("No Docker app found in /Applications");
-  await run("open", ["-a", APP], { timeout: 10_000 });
+  const app = dockerApp();
+  if (!app) {
+    const manual = dockerManualStart();
+    throw new Error(manual ? `Docker Desktop isn't installed. Start Docker in a terminal: ${manual}` : "No Docker app found in /Applications");
+  }
+  await run(app.command, app.args, { timeout: 10_000 });
 }
 
 // ---- Containers ------------------------------------------------------------
@@ -235,7 +246,7 @@ async function loadSnapshot(): Promise<Snapshot> {
         }
       })
   );
-  return { daemon: RUNNING, containers };
+  return { daemon: { state: "running", message: null, app: dockerApp()?.name ?? null }, containers };
 }
 
 let snapshot: { at: number; promise: Promise<Snapshot> } | null = null;

@@ -3,21 +3,27 @@ import os from "os";
 import path from "path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// dataDir.ts reads process.cwd() and os.homedir() when it loads, and caches the
-// folder it picks, so each test points both at a temp folder and imports a
-// fresh copy. Nothing here touches the real repo's data/ or ~/Library.
+// dataDir.ts reads process.cwd() when it loads, os.homedir() when it picks the
+// default folder, and caches the folder it picks, so each test points both at
+// a temp folder (until it ends) and imports a fresh copy. The platform is
+// pinned, so the defaults don't depend on the machine running the tests.
+// Nothing here touches the real repo's data/, ~/Library or ~/.config.
 const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workbench-datadir-")));
 const repo = path.join(root, "repo");
 const home = path.join(root, "home");
 const legacy = path.join(repo, "data");
 const target = path.join(root, "app-support", "data");
 
+const realPlatform = process.platform;
+const setPlatform = (platform: NodeJS.Platform) =>
+  Object.defineProperty(process, "platform", { value: platform, configurable: true });
+
 async function load() {
   vi.resetModules();
-  vi.spyOn(process, "cwd").mockReturnValue(repo);
+  const cwd = vi.spyOn(process, "cwd").mockReturnValue(repo);
   vi.spyOn(os, "homedir").mockReturnValue(home);
   const mod = await import("./dataDir");
-  vi.restoreAllMocks();
+  cwd.mockRestore();
   return mod;
 }
 
@@ -33,10 +39,12 @@ beforeEach(() => {
   fs.mkdirSync(repo, { recursive: true });
   vi.stubEnv("WORKBENCH_DATA_DIR", target);
   vi.stubEnv("NODE_ENV", "test");
+  setPlatform("darwin");
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setPlatform(realPlatform);
 });
 
 afterAll(() => {
@@ -62,6 +70,33 @@ describe("dataDir", () => {
     const expected = path.join(home, "Library", "Application Support", "workbench", "data");
     expect(dataDir()).toBe(expected);
     expect(fs.existsSync(expected)).toBe(true);
+  });
+
+  describe("default folder, where Electron keeps the desktop app's data", () => {
+    beforeEach(() => {
+      vi.stubEnv("WORKBENCH_DATA_DIR", "");
+    });
+
+    it("uses ~/.config on Linux", async () => {
+      setPlatform("linux");
+      vi.stubEnv("XDG_CONFIG_HOME", "");
+      const { dataDir } = await load();
+      expect(dataDir()).toBe(path.join(home, ".config", "workbench", "data"));
+    });
+
+    it("follows XDG_CONFIG_HOME on Linux", async () => {
+      setPlatform("linux");
+      vi.stubEnv("XDG_CONFIG_HOME", path.join(root, "xdg"));
+      const { dataDir } = await load();
+      expect(dataDir()).toBe(path.join(root, "xdg", "workbench", "data"));
+    });
+
+    it("uses %APPDATA% on Windows", async () => {
+      setPlatform("win32");
+      vi.stubEnv("APPDATA", path.join(root, "Roaming"));
+      const { dataDir } = await load();
+      expect(dataDir()).toBe(path.join(root, "Roaming", "workbench", "data"));
+    });
   });
 
   it("leaves an existing folder's contents alone", async () => {
