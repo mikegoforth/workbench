@@ -3,6 +3,7 @@
 import {
   ChevronsLeft,
   ChevronsRight,
+  EthernetPort,
   EyeOff,
   FolderCog,
   FolderGit2,
@@ -69,6 +70,7 @@ export default function SideNav({
       items: [
         { view: "projects", icon: FolderGit2, count: counts.projects },
         { view: "servers", icon: Server, count: counts.servers, tone: "ok" },
+        { view: "ports", icon: EthernetPort },
       ],
     },
     {

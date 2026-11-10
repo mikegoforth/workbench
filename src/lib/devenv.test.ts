@@ -46,6 +46,7 @@ import {
   devEnv,
   getStatus,
   install,
+  liveRuns,
   runningProjects,
   runScript,
   scriptStatus,
@@ -1119,6 +1120,23 @@ describe("runningProjects", () => {
     expect(result.projects).toEqual([
       { name: "alpha", ports: [] },
       { name: "beta", ports: [] },
+    ]);
+  });
+
+  it("describes each live run: its slot, kind, script, pid and start", async () => {
+    state("dev", "alpha", { pid: 11, lstart: LSTART, startedAt: "2026-11-09T09:00:00.000Z" }); // older file: no kind
+    state("dev", "beta", { pid: 12, lstart: LSTART, kind: "install", startedAt: "2026-11-09T09:01:00.000Z" });
+    state("script", "alpha", { pid: 13, lstart: LSTART, kind: "script", script: "test", startedAt: "2026-11-09T09:02:00.000Z" });
+    state("script", "gamma", { pid: 14, lstart: LSTART, kind: "script", startedAt: "2026-11-09T09:03:00.000Z" }); // no script name
+    for (const pid of [11, 12, 13, 14]) procs.set(pid, LSTART);
+
+    const runs = await liveRuns();
+
+    expect(runs.sort((a, b) => a.pid - b.pid)).toEqual([
+      { project: "alpha", slot: "dev", kind: "dev", script: null, pid: 11, startedAt: "2026-11-09T09:00:00.000Z" },
+      { project: "beta", slot: "dev", kind: "install", script: null, pid: 12, startedAt: "2026-11-09T09:01:00.000Z" },
+      { project: "alpha", slot: "script", kind: "script", script: "test", pid: 13, startedAt: "2026-11-09T09:02:00.000Z" },
+      { project: "gamma", slot: "script", kind: "script", script: null, pid: 14, startedAt: "2026-11-09T09:03:00.000Z" },
     ]);
   });
 

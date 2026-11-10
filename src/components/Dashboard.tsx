@@ -22,6 +22,7 @@ import Setup from "./Setup";
 import UpdateBanner from "./UpdateBanner";
 import { queryRows, type ChipId, type Sort, type SortKey } from "./projectQuery";
 import ProjectsView from "./ProjectsView";
+import PortsView from "./PortsView";
 import ServersView from "./ServersView";
 import SideNav from "./SideNav";
 import TodosView from "./TodosView";
@@ -616,6 +617,9 @@ export default function Dashboard() {
         break;
       case "servers":
         content = <ServersView ctx={ctx} items={derived.servers} />;
+        break;
+      case "ports":
+        content = <PortsView ctx={ctx} />;
         break;
       case "attention":
         content = <AttentionView ctx={ctx} items={derived.attention} />;
