@@ -27,7 +27,7 @@ Dev servers it starts keep running when you quit or update the app.
 
 ## Updates and releases
 
-**Releasing.** Raise the version and push the tag: `npm version patch && git push --follow-tags`. The [release workflow](../.github/workflows/release.yml) builds Apple Silicon and Intel versions, and publishes them with `SHA256SUMS`. Its header lists the optional secrets.
+**Releasing.** Raise the version and push the tag: `npm version patch && git push --follow-tags`. The [release workflow](../.github/workflows/release.yml) builds Apple Silicon and Intel versions into a draft release, attaches `SHA256SUMS` and a build-provenance attestation, then publishes it. If any step fails, the release stays an unpublished draft. This order works with **immutable releases** (Settings → General → Releases), which lock a release's files and tag once it's published. The workflow's header lists the optional secrets.
 
 **Update feed.** A build only checks for updates when `WORKBENCH_RELEASES_OWNER` and `WORKBENCH_RELEASES_REPO` are set at build time. The release workflow sets them to the repo it runs in, or to the `RELEASES_OWNER` / `RELEASES_REPO` variables. Local builds and forks without them never check for updates, so they can't pick up someone else's releases. When there is a feed, the app checks at launch, every 4 hours, and from **workbench → Check for Updates…**.
 
