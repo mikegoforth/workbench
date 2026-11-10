@@ -460,6 +460,8 @@ export default function Dashboard() {
 
   // Setup takes the whole window: on first run, when something required has gone
   // missing since, or when opened from Settings → Setup.
+  // Tool checks that aren't passing; the Setup nav item only shows when there are some.
+  const setupIssues = requirements?.requirements.filter((r) => !r.ok).length ?? 0;
   const setupDue =
     requirements !== null &&
     setupCompletedAt !== undefined &&
@@ -613,6 +615,7 @@ export default function Dashboard() {
           view={route.view}
           counts={derived.counts}
           counting={firstScan}
+          setupIssues={setupIssues}
           collapsed={navCollapsed}
           onGo={go}
           onToggleCollapsed={() => setNavCollapsed((c) => !c)}
@@ -620,7 +623,7 @@ export default function Dashboard() {
         {drawerOpen && (
           <div className="fixed inset-x-0 top-14 bottom-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} aria-hidden />
-            <SideNav className="relative h-full shadow-pop" view={route.view} counts={derived.counts} counting={firstScan} collapsed={false} onGo={go} />
+            <SideNav className="relative h-full shadow-pop" view={route.view} counts={derived.counts} counting={firstScan} setupIssues={setupIssues} collapsed={false} onGo={go} />
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">

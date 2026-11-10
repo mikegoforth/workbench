@@ -35,6 +35,7 @@ export default function SideNav({
   view,
   counts,
   counting = false,
+  setupIssues = 0,
   collapsed,
   onGo,
   onToggleCollapsed,
@@ -45,6 +46,13 @@ export default function SideNav({
   counts: Counts;
   /** The first scan is still running: counts aren't known yet. */
   counting?: boolean;
+  /**
+   * Tool checks that aren't passing (optional ones included). Setup is only
+   * listed when there's something to fix there, or while it's open; it's
+   * always reachable from search, and it takes over by itself at launch if a
+   * required tool goes missing.
+   */
+  setupIssues?: number;
   collapsed: boolean;
   onGo: (view: View) => void;
   onToggleCollapsed?: () => void;
@@ -72,7 +80,7 @@ export default function SideNav({
       items: [
         { view: "folder", icon: FolderCog },
         { view: "hidden", icon: EyeOff, count: counts.hidden },
-        { view: "setup", icon: ListChecks },
+        ...(setupIssues > 0 || view === "setup" ? [{ view: "setup" as const, icon: ListChecks, count: setupIssues || undefined, tone: "warn" as const }] : []),
       ],
     },
   ];

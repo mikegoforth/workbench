@@ -44,6 +44,10 @@ export const RELEASES: Release[] = [
         text: "Changed files are grouped (conflicts first) with a filter, common scripts come first with a search box, and [ and ] switch between a project's tabs.",
       },
       {
+        kind: "changed",
+        text: "Setup leaves the sidebar once everything is installed, and comes back with a count when a tool needs attention. It's always a search away.",
+      },
+      {
         kind: "fixed",
         text: "A project page no longer says \"In sync\" before it has fetched, shows a Checks link without checks, or calls a project with uncommitted work \"All clear\". Counts show a dash, not 0, while the first scan runs.",
       },
