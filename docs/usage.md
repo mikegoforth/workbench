@@ -26,7 +26,7 @@
 
 ## Color themes
 
-The palette button at the right of the top bar opens the theme picker: **Light**, **Paper** (warm, low-glare), **Dark**, **Dimmed** (soft slate), **High contrast light** and **High contrast dark**, or **Follow system** (Light or Dark, as the system is set). Arrow keys preview each theme across the whole app; `Enter` or a click keeps it and `Esc` puts the previous one back. The choice is remembered on this computer.
+The palette button at the right of the top bar opens the theme picker: **Light**, **Paper** (warm, low-glare), **Dark**, **Dimmed** (soft slate), **High contrast light** and **High contrast dark**, the special themes **Matrix**, **Cyberpunk** and **Crypto**, or **Follow system** (Light or Dark, as the system is set). Arrow keys preview each theme across the whole app; `Enter` or a click keeps it and `Esc` puts the previous one back. The choice is remembered on this computer.
 
 ## What the actions do
 

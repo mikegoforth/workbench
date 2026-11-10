@@ -5,7 +5,7 @@
  * the OS between Light and Dark.
  */
 
-export type ThemeId = "light" | "dark" | "dimmed" | "paper" | "hc-light" | "hc-dark";
+export type ThemeId = "light" | "dark" | "dimmed" | "paper" | "hc-light" | "hc-dark" | "matrix" | "cyberpunk" | "crypto";
 export type ThemePref = ThemeId | "system";
 export type ThemeMode = "light" | "dark";
 
@@ -14,8 +14,8 @@ export interface ThemeInfo {
   label: string;
   description: string;
   mode: ThemeMode;
-  /** Picker group: regular light and dark themes, then high contrast. */
-  group: "Light" | "Dark" | "High contrast";
+  /** Picker group: regular light and dark themes, high contrast, then the special ones. */
+  group: "Light" | "Dark" | "High contrast" | "Special";
   /** Background, surface, accent and text, for the picker's preview chip. */
   swatch: [string, string, string, string];
 }
@@ -27,6 +27,9 @@ export const THEMES: ThemeInfo[] = [
   { id: "dimmed", label: "Dimmed", description: "Softer slate blue, less contrast at night", mode: "dark", group: "Dark", swatch: ["#22272e", "#2a3038", "#6cb6ff", "#d3dbe4"] },
   { id: "hc-light", label: "High contrast light", description: "Black on white with strong borders", mode: "light", group: "High contrast", swatch: ["#ffffff", "#ffffff", "#0f4a85", "#000000"] },
   { id: "hc-dark", label: "High contrast dark", description: "White on black with strong borders", mode: "dark", group: "High contrast", swatch: ["#000000", "#000000", "#75beff", "#ffffff"] },
+  { id: "matrix", label: "Matrix", description: "Phosphor green on black, in terminal type", mode: "dark", group: "Special", swatch: ["#020a04", "#04110a", "#00ff41", "#b9f5c7"] },
+  { id: "cyberpunk", label: "Cyberpunk", description: "Neon cyan and hot pink, with hard edges", mode: "dark", group: "Special", swatch: ["#0d0221", "#150734", "#00e5ff", "#ff2a6d"] },
+  { id: "crypto", label: "Crypto", description: "Gold on midnight, with ticker green and red", mode: "dark", group: "Special", swatch: ["#0b0e14", "#121722", "#f7b500", "#e9edf4"] },
 ];
 
 export const THEME_KEY = "workbench-theme";

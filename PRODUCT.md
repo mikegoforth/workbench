@@ -37,7 +37,7 @@ It reads the actual machine: the real git state of every folder, the processes a
 - Docker: compose stacks found in the project folder, its subfolders, and from container labels (so stacks started outside workbench count); per-stack Start/Stop/Restart; container health, crash loops and error exits raised in Needs attention; merged container logs; Docker Desktop status with a Start button.
 - Keyboard: ⌘K (Ctrl K on Windows and Linux) or / to search; ↑/↓ or j/k to move through projects, Enter to open, Esc to go back; O, G, T, S for VS Code, GitHub, Terminal, Start.
 - Command-running API routes accept only loopback hosts and JSON requests; the dev server itself listens on all interfaces.
-- Must offer color themes (owner's request): Light, Paper, Dark, Dimmed, high-contrast light and dark, or follow the system, chosen from a VS Code-style picker with live preview.
+- Must offer color themes (owner's request): Light, Paper, Dark, Dimmed, high-contrast light and dark, the special Matrix, Cyberpunk and Crypto, or follow the system, chosen from a VS Code-style picker with live preview.
 - macOS, Windows and Linux; Open in Terminal uses Terminal.app on macOS, Windows Terminal (or Command Prompt) on Windows, and the first terminal found on Linux. GitHub data requires `gh auth login`.
 
 ## Brand Commitments

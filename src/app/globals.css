@@ -202,6 +202,115 @@
   --shadow-pop: 0 0 0 1px #ffffff;
 }
 
+/*
+ * Special themes: palettes with character, and a few effects of their own
+ * below (type, corners, glow). All dark; text keeps WCAG AA contrast.
+ */
+
+/* Matrix: phosphor green on near-black. */
+:root[data-theme="matrix"] {
+  color-scheme: dark;
+  --bg: #020a04;
+  --sidebar: #010703;
+  --surface: #04110a;
+  --subtle: #071a0e;
+  --hover: #0b2614;
+  --line: #10381d;
+  --line-strong: #1d5c31;
+  --fg: #b9f5c7;
+  --fg-2: #84dd9c;
+  --fg-3: #52ad6b;
+  --brand: #00ff41;
+  --brand-hover: #5cff85;
+  --on-brand: #001a07;
+  --brand-text: #3dff6e;
+  --ok: #3dff6e;
+  --ok-dot: #00e03a;
+  --warn: #d6ff3d;
+  --warn-dot: #c4f000;
+  --bad: #ff5c5c;
+  --bad-dot: #ff3b3b;
+  --term: #000000;
+  --term-fg: #3dff6e;
+  --focus: #00ff41;
+  --soft: 14%;
+  --edge: 45%;
+  --shadow-card: 0 0 0 1px rgb(0 255 65 / 0.04);
+  --shadow-bar: none;
+  --shadow-pop: 0 0 0 1px rgb(0 255 65 / 0.25), 0 20px 48px -12px rgb(0 0 0 / 0.8);
+}
+
+/* Cyberpunk: neon cyan and hot pink on deep indigo. */
+:root[data-theme="cyberpunk"] {
+  color-scheme: dark;
+  --bg: #0d0221;
+  --sidebar: #0a0118;
+  --surface: #150734;
+  --subtle: #1c0b42;
+  --hover: #261052;
+  --line: #3a1a6e;
+  --line-strong: #5a2ea6;
+  --fg: #f4ecff;
+  --fg-2: #d2bff7;
+  --fg-3: #a993da;
+  --brand: #00e5ff;
+  --brand-hover: #5cf0ff;
+  --on-brand: #04001a;
+  --brand-text: #3debff;
+  --ok: #4dffb5;
+  --ok-dot: #19f0a0;
+  --warn: #fcee0a;
+  --warn-dot: #fcee0a;
+  --bad: #ff4d8d;
+  --bad-dot: #ff2a6d;
+  --term: #07000f;
+  --term-fg: #f4ecff;
+  --focus: #ff2a6d;
+  --soft: 16%;
+  --edge: 50%;
+  --shadow-card: 0 0 0 1px rgb(0 229 255 / 0.06);
+  --shadow-bar: none;
+  --shadow-pop: 0 0 0 1px rgb(255 42 109 / 0.45), 0 0 32px -4px rgb(255 42 109 / 0.35), 0 20px 48px -12px rgb(0 0 0 / 0.8);
+  /* Cut corners: sharper than every other theme. */
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+/* Crypto: gold on midnight navy, with exchange green and red. */
+:root[data-theme="crypto"] {
+  color-scheme: dark;
+  --bg: #0b0e14;
+  --sidebar: #090c11;
+  --surface: #121722;
+  --subtle: #171d2a;
+  --hover: #1d2433;
+  --line: #242c3d;
+  --line-strong: #364157;
+  --fg: #e9edf4;
+  --fg-2: #b9c2d2;
+  --fg-3: #8b95a9;
+  --brand: #f7b500;
+  --brand-hover: #ffc933;
+  --on-brand: #1a1200;
+  --brand-text: #f5bb33;
+  --ok: #2fd896;
+  --ok-dot: #16c784;
+  --warn: #ff9f43;
+  --warn-dot: #ff9f43;
+  --bad: #f0535b;
+  --bad-dot: #ea3943;
+  --term: #070a0f;
+  --term-fg: #e9edf4;
+  --soft: 14%;
+  --edge: 42%;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-bar: none;
+  --shadow-pop: 0 0 0 1px rgb(247 181 0 / 0.2), 0 20px 48px -12px rgb(0 0 0 / 0.7);
+}
+
 /* Mixed from each theme's base colors (custom properties resolve per theme on <html>). */
 :root {
   --brand-soft: color-mix(in srgb, var(--brand) var(--soft), transparent);
@@ -300,6 +409,47 @@
     outline-offset: 2px;
   }
 
+  /* ---- Special themes' own touches ---- */
+
+  /* Matrix: terminal type everywhere, a faint phosphor glow, fine scanlines on the page. */
+  :root[data-theme="matrix"] body {
+    font-family: var(--font-roboto-mono), ui-monospace, "SF Mono", monospace;
+    background-image: repeating-linear-gradient(0deg, rgb(0 255 65 / 0.03) 0 1px, transparent 1px 3px);
+  }
+  :root[data-theme="matrix"] :is(h1, h2, [aria-current="page"]) {
+    text-shadow: 0 0 10px rgb(0 255 65 / 0.45);
+  }
+  :root[data-theme="matrix"] ::selection {
+    background: rgb(0 255 65 / 0.3);
+  }
+
+  /* Cyberpunk: neon glow on primary actions and the current page; a pink caret. */
+  :root[data-theme="cyberpunk"] .bg-brand {
+    box-shadow: 0 0 14px -2px rgb(0 229 255 / 0.65);
+  }
+  :root[data-theme="cyberpunk"] [aria-current="page"] {
+    text-shadow: 0 0 12px rgb(0 229 255 / 0.5);
+  }
+  /* A neon rule under the top bar. */
+  :root[data-theme="cyberpunk"] body > div header {
+    border-bottom-color: rgb(255 42 109 / 0.55);
+    box-shadow: 0 1px 12px -2px rgb(255 42 109 / 0.35);
+  }
+  :root[data-theme="cyberpunk"] :is(input, textarea) {
+    caret-color: #ff2a6d;
+  }
+
+  /* Crypto: ticker-aligned numbers, and gold leaf on primary actions. */
+  :root[data-theme="crypto"] body {
+    font-variant-numeric: tabular-nums;
+  }
+  :root[data-theme="crypto"] .bg-brand {
+    background-image: linear-gradient(180deg, #ffd45c 0%, #f7b500 55%, #e09e00 100%);
+  }
+  :root[data-theme="crypto"] .bg-brand:hover {
+    box-shadow: 0 0 16px -4px rgb(247 181 0 / 0.7);
+  }
+
   /* High contrast has no tinted fills, so the current page, the chosen row and
      the selected tab get an outline instead, as in VS Code's high-contrast themes. */
   :root[data-theme^="hc-"] [aria-current="page"],
@@ -389,4 +539,11 @@
   .markdown hr {
     @apply my-6 border-line;
   }
+}
+
+/* Cyberpunk's hot-pink page titles. Outside the layers on purpose: the title's
+   text color is a utility class, which would win over anything in a layer. */
+:root[data-theme="cyberpunk"] h1 {
+  color: #ff4d8d;
+  text-shadow: 0 0 14px rgb(255 42 109 / 0.55);
 }
