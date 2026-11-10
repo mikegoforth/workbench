@@ -22,18 +22,23 @@ export const isSelf = (dir: string): boolean => path.resolve(dir) === SELF_DIR;
 /** Where the projects folder came from: saved in settings, the env var, or the default. */
 export type ProjectsDirSource = "settings" | "env" | "default";
 
-/** `~` or `~/x` → an absolute path under the home folder. Anything else is returned as is. */
+/** `~` or `~/x` (also `~\\x` on Windows) → an absolute path under the home folder. Anything else is returned as is. */
 export function expandHome(p: string): string {
   if (p === "~") return os.homedir();
-  if (p.startsWith("~/")) return path.join(os.homedir(), p.slice(2));
+  if (p.startsWith("~/") || (platform() === "windows" && p.startsWith("~\\"))) return path.join(os.homedir(), p.slice(2));
   return p;
 }
 
-/** An absolute path with the home folder shortened to `~`, for display. */
+/**
+ * An absolute path with the home folder shortened to `~`, for display. The
+ * rest keeps the platform's separators (`~\\code` on Windows, where paths
+ * also match whatever their case).
+ */
 export function tildify(p: string): string {
   const home = os.homedir();
-  if (p === home) return "~";
-  return p.startsWith(home + path.sep) ? "~" + p.slice(home.length) : p;
+  const fold = platform() === "windows" ? (s: string) => s.toLowerCase() : (s: string) => s;
+  if (fold(p) === fold(home)) return "~";
+  return fold(p).startsWith(fold(home + path.sep)) ? "~" + p.slice(home.length) : p;
 }
 
 /**
@@ -52,6 +57,12 @@ export function projectsDir(): string {
   return projectsDirInfo().dir;
 }
 
+const FULL_PATH_EXAMPLE: Partial<Record<ReturnType<typeof platform>, string>> = {
+  mac: "~/Projects or /Users/you/code",
+  linux: "~/Projects or /home/you/code",
+  windows: "~\\Projects or C:\\Users\\you\\code",
+};
+
 /**
  * Check a folder someone asked to use as the projects folder. Accepts `~`
  * paths; must be absolute, an existing directory, and not the filesystem root.
@@ -62,7 +73,7 @@ export function validateProjectsDir(input: unknown): { dir: string } | { error: 
   }
   const expanded = expandHome(input.trim());
   if (!path.isAbsolute(expanded)) {
-    return { error: `Use a full path, like ~/Projects or ${platform() === "linux" ? "/home" : "/Users"}/you/code` };
+    return { error: `Use a full path, like ${FULL_PATH_EXAMPLE[platform()] ?? FULL_PATH_EXAMPLE.mac}` };
   }
   const dir = path.resolve(expanded);
   if (dir === path.parse(dir).root) {
@@ -77,17 +88,27 @@ export function validateProjectsDir(input: unknown): { dir: string } | { error: 
 }
 
 /**
+ * Names Windows treats specially in any folder: characters it doesn't allow
+ * (":" would name an alternate data stream), a trailing dot or space (dropped,
+ * so " .." would mean the folder itself), and device names such as NUL or COM1.
+ */
+const WINDOWS_UNSAFE_NAME = /[<>:"|?*\x00-\x1f]|[. ]$|^(con|prn|aux|nul|conin\$|conout\$|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])(\.|$)/i;
+
+/**
  * Resolve a project name from a request to its folder inside the projects
- * folder. Only bare folder names are accepted (no separators, no dot-folders),
+ * folder. Only bare folder names are accepted (no separators, no dot-folders;
+ * on Windows also no backslashes, drive letters or names Windows rewrites),
  * so a caller can never reach a path outside it. Returns null if invalid or
  * missing.
  */
 export function resolveProjectDir(name: unknown): string | null {
+  const windows = platform() === "windows";
   if (
     typeof name !== "string" ||
     !name ||
     name.startsWith(".") ||
-    name !== path.basename(name) ||
+    name !== (windows ? path.win32 : path).basename(name) ||
+    (windows && WINDOWS_UNSAFE_NAME.test(name)) ||
     // Names are used as keys in saved settings and notes.
     name === "__proto__"
   ) {

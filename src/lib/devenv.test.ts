@@ -53,9 +53,14 @@ import {
   start,
   stop,
   stopScript,
+  WINDOWS_LAUNCHER,
 } from "./devenv";
 
 const LSTART = "Mon Nov  9 10:00:00 2026";
+/** On Windows a process is identified by its creation time in ticks. */
+const TICKS = "639012345678901234";
+/** What identifies the fake processes the tests start: LSTART, or TICKS on Windows. */
+let ident = LSTART;
 
 // Process identity differs per platform (ps on macOS, /proc on Linux), so the
 // platform is pinned to macOS unless a test says otherwise.
@@ -98,24 +103,68 @@ function ps(args: string[]): ExecResult {
   return pids.every((p) => procs.has(p)) ? { stdout } : Object.assign(new Error("ps: some pids gone"), { stdout });
 }
 
+/** Windows PowerShell's creation times: "<pid> <ticks>" for each live pid asked about. */
+function powershell(args: string[]): ExecResult {
+  const pids = args[4].match(/^Get-Process -Id ([\d,]+) -ErrorAction SilentlyContinue \| ForEach-Object /)![1].split(",").map(Number);
+  const stdout = pids
+    .filter((p) => procs.has(p))
+    .map((p) => `${p} ${procs.get(p)}\r\n`)
+    .join("");
+  return pids.every((p) => procs.has(p)) ? { stdout } : Object.assign(new Error("Get-Process: some pids gone"), { stdout });
+}
+
+/** taskkill /pid N /T [/F]: ends the tree unless it only goes with /F. */
+function taskkill(args: string[]): ExecResult {
+  const pid = Number(args[1]);
+  if (!groups.has(pid)) return new Error("ERROR: not found");
+  if (args.includes("/F") || !ignoresTerm) {
+    groups.delete(pid);
+    procs.delete(pid);
+    return { stdout: "SUCCESS" };
+  }
+  return new Error("ERROR: This process can only be terminated forcefully (with /F option).");
+}
+
+const WINDOWS_ROOT = "Q:\\Windows";
+const POWERSHELL = "Q:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+const TASKKILL = "Q:\\Windows\\System32\\taskkill.exe";
+const CMD = "Q:\\Windows\\System32\\cmd.exe";
+
 function fakeExecFile(cmd: string, args: string[], ...rest: unknown[]) {
   const callback = rest.find((a) => typeof a === "function") as (
     err: Error | null,
     res?: { stdout: string; stderr: string }
   ) => void;
-  const result = cmd === "ps" ? ps(args) : cmd === "docker" ? dockerReply(args) : new Error(`unexpected ${cmd}`);
+  const result =
+    cmd === "ps"
+      ? ps(args)
+      : cmd === "docker"
+        ? dockerReply(args)
+        : cmd === POWERSHELL
+          ? powershell(args)
+          : cmd === TASKKILL
+            ? taskkill(args)
+            : new Error(`unexpected ${cmd}`);
   if (result instanceof Error) callback(result);
   else callback(null, { stdout: "", stderr: "", ...result });
 }
 
 function fakeSpawn() {
   const child = Object.assign(new EventEmitter(), { pid: nextPid, unref: vi.fn() });
-  if (nextPid) procs.set(nextPid, LSTART);
+  if (nextPid) {
+    procs.set(nextPid, ident);
+    groups.add(nextPid);
+  }
   children.push(child);
   return child;
 }
 
 function fakeKill(pid: number, signal?: string | number) {
+  // Windows has no process groups: a pid stands for its process (and only signal 0 is sent).
+  if (process.platform === "win32") {
+    if (pid > 0 && signal === 0 && groups.has(pid)) return true;
+    throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" });
+  }
   if (pid >= 0 || !groups.has(-pid)) throw Object.assign(new Error("kill ESRCH"), { code: "ESRCH" });
   if (signal === "SIGKILL" || (signal === "SIGTERM" && !ignoresTerm)) {
     groups.delete(-pid);
@@ -143,9 +192,9 @@ function startedEarlier(
 ) {
   const file = slot === "dev" ? devFile("alpha.json") : devFile("scripts", "alpha.json");
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify({ lstart: LSTART, startedAt: "2026-11-09T10:00:00.000Z", ...state }));
+  fs.writeFileSync(file, JSON.stringify({ lstart: ident, startedAt: "2026-11-09T10:00:00.000Z", ...state }));
   if (alive) {
-    procs.set(state.pid, LSTART);
+    procs.set(state.pid, ident);
     groups.add(state.pid);
   }
 }
@@ -221,6 +270,7 @@ beforeEach(() => {
   children.length = 0;
   ignoresTerm = false;
   nextPid = 4242;
+  ident = LSTART;
   dockerReply = () => ({ stdout: "" });
 
   mocks.execFile.mockReset().mockImplementation(fakeExecFile);
@@ -693,7 +743,7 @@ describe("stop", () => {
     const dockerCalls = mocks.execFile.mock.calls.filter((c) => c[0] === "docker");
     expect(dockerCalls).toHaveLength(1);
     expect(dockerCalls[0][1]).toEqual(["stop", "a", "c"]);
-    expect(dockerCalls[0][2]).toEqual({ timeout: 120_000 });
+    expect(dockerCalls[0][2]).toEqual({ timeout: 120_000, windowsHide: true });
     expect(invalidateDocker).toHaveBeenCalled();
     expect(readLog("dev")).toBe("› stopping dev process\n› docker stop (alpha)\n");
     expect(fs.existsSync(devFile("alpha.json"))).toBe(false);
@@ -789,7 +839,7 @@ describe("stackAction", () => {
   it("stops the stack's running containers", async () => {
     vi.mocked(projectStacks).mockResolvedValue([api()]);
     await stackAction("alpha", dir, "alpha-api", "api", "stop");
-    expect(mocks.execFile).toHaveBeenCalledWith("docker", ["stop", "a"], { timeout: 120_000 }, expect.any(Function));
+    expect(mocks.execFile).toHaveBeenCalledWith("docker", ["stop", "a"], { timeout: 120_000, windowsHide: true }, expect.any(Function));
     expect(readLog("dev")).toBe("› docker stop (alpha-api in api)\n");
     expect(invalidateDocker).toHaveBeenCalled();
   });
@@ -797,7 +847,7 @@ describe("stackAction", () => {
   it("restarts the running containers", async () => {
     vi.mocked(projectStacks).mockResolvedValue([stack({ containers: [container({ id: "a" }), container({ id: "c" })] })]);
     await stackAction("alpha", dir, "alpha", "", "restart");
-    expect(mocks.execFile).toHaveBeenCalledWith("docker", ["restart", "a", "c"], { timeout: 180_000 }, expect.any(Function));
+    expect(mocks.execFile).toHaveBeenCalledWith("docker", ["restart", "a", "c"], { timeout: 180_000, windowsHide: true }, expect.any(Function));
     expect(readLog("dev")).toBe("› docker restart (alpha)\n");
   });
 
@@ -810,7 +860,7 @@ describe("stackAction", () => {
     expect(mocks.execFile).toHaveBeenCalledWith(
       "docker",
       ["compose", "-p", "alpha-api", "-f", "compose.yaml", "-f", "compose.dev.yaml", "up", "-d"],
-      { cwd: path.join(dir, "api"), timeout: 600_000, maxBuffer: 16 * 1024 * 1024 },
+      { cwd: path.join(dir, "api"), timeout: 600_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
       expect.any(Function)
     );
     expect(readLog("dev")).toBe(
@@ -841,7 +891,7 @@ describe("stackAction", () => {
       stack({ fromFiles: false, containers: [container({ id: "a", state: "exited" }), container({ id: "b", state: "created" })] }),
     ]);
     await stackAction("alpha", dir, "alpha", "", "start");
-    expect(mocks.execFile).toHaveBeenCalledWith("docker", ["start", "a", "b"], { timeout: 180_000 }, expect.any(Function));
+    expect(mocks.execFile).toHaveBeenCalledWith("docker", ["start", "a", "b"], { timeout: 180_000, windowsHide: true }, expect.any(Function));
     expect(readLog("dev")).toBe("› docker start (alpha)\n");
   });
 
@@ -942,7 +992,8 @@ describe("runScript", () => {
     expect(mocks.spawn).toHaveBeenCalledTimes(1);
   });
 
-  it("logs the command and its exit code, and never lets the shell parse the name", async () => {
+  // Runs the real /bin/sh script, which Windows doesn't have (see "on Windows" for its launcher).
+  it.skipIf(realPlatform === "win32")("logs the command and its exit code, and never lets the shell parse the name", async () => {
     writeFiles({ "package.json": packageJson({ "lint; touch pwned": "eslint ." }) });
     await runScript("alpha", dir, "lint; touch pwned");
     const [, args] = mocks.spawn.mock.lastCall!;
@@ -1154,5 +1205,286 @@ describe("on Linux", () => {
       { name: "beta", ports: [] },
     ]);
     expect(mocks.execFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("on Windows", () => {
+  // node.exe and docker.exe on a fake PATH (never run), System32 on a drive no machine has.
+  const bin = path.join(root, "winbin");
+  let node: string;
+  let docker: string;
+
+  beforeEach(() => {
+    setPlatform("win32");
+    ident = TICKS;
+    fs.mkdirSync(bin, { recursive: true });
+    node = path.join(bin, "node.exe");
+    docker = path.join(bin, "docker.exe");
+    for (const file of [node, docker]) fs.writeFileSync(file, "", { mode: 0o755 });
+    vi.stubEnv("PATH", bin);
+    vi.stubEnv("PATHEXT", ".EXE;.CMD");
+    vi.stubEnv("SystemRoot", WINDOWS_ROOT);
+  });
+
+  /** The steps the last spawn handed to the launcher. */
+  const launched = () => {
+    const [cmd, args, opts] = mocks.spawn.mock.lastCall!;
+    expect(cmd).toBe(node);
+    expect(args.slice(0, 2)).toEqual(["-e", WINDOWS_LAUNCHER]);
+    return { ...JSON.parse(args[2]), opts };
+  };
+
+  const psCalls = () => mocks.execFile.mock.calls.filter((c) => c[0] === POWERSHELL);
+  const taskkills = () => mocks.execFile.mock.calls.filter((c) => c[0] === TASKKILL).map((c) => c[1]);
+
+  it("runs compose and the dev script through the launcher, detached and hidden, cmd.exe getting only fixed words", async () => {
+    vi.stubEnv("WORKBENCH_API_TOKEN", "secret");
+    writeFiles({ "package.json": packageJson({ dev: "vite" }), "compose.yaml": "services: {}" });
+    await start("alpha", dir);
+    const { steps, exitLine, opts } = launched();
+    expect(steps).toEqual([
+      { label: "docker compose up -d", command: docker, args: ["compose", "up", "-d"] },
+      { label: "npm run dev", command: CMD, args: ["/d", "/s", "/c", '"npm run dev"'], verbatim: true },
+    ]);
+    expect(exitLine).toBe(false);
+    expect(opts).toMatchObject({ cwd: dir, detached: true, windowsHide: true });
+    expect(opts.stdio[0]).toBe("ignore");
+    expect(opts.env).not.toHaveProperty("WORKBENCH_API_TOKEN");
+    // The launcher's creation time, from one PowerShell call with nothing but the pid in it.
+    expect(readJson(devFile("alpha.json"))).toMatchObject({ pid: 4242, lstart: TICKS, kind: "dev" });
+    expect(psCalls()).toHaveLength(1);
+    const [, args, options] = psCalls()[0];
+    expect(args).toEqual([
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "Get-Process -Id 4242 -ErrorAction SilentlyContinue | ForEach-Object { try { '{0} {1}' -f $_.Id, $_.StartTime.ToUniversalTime().Ticks } catch {} }",
+    ]);
+    expect(options).toMatchObject({ windowsHide: true });
+  });
+
+  it("installs with the project's package manager", async () => {
+    writeFiles({ "package.json": packageJson({}), "pnpm-lock.yaml": "" });
+    await install("alpha", dir);
+    expect(launched().steps).toEqual([{ label: "pnpm install", command: CMD, args: ["/d", "/s", "/c", '"pnpm install"'], verbatim: true }]);
+  });
+
+  it("needs Node on PATH to run anything", async () => {
+    writeFiles({ "package.json": packageJson({ dev: "vite" }) });
+    fs.rmSync(node);
+    const err = await devError(start("alpha", dir));
+    expect(err.status).toBe(500);
+    expect(err.message).toBe("Node.js isn't on PATH; workbench runs things with it on Windows");
+    expect(mocks.spawn).not.toHaveBeenCalled();
+  });
+
+  it("needs the Docker CLI on PATH to bring compose up", async () => {
+    writeFiles({ "compose.yaml": "services: {}" });
+    fs.rmSync(docker);
+    const err = await devError(start("alpha", dir));
+    expect(err).toMatchObject({ status: 500, message: "Docker CLI not found on PATH" });
+    expect(mocks.spawn).not.toHaveBeenCalled();
+  });
+
+  it("saves no start time when the launcher is already gone", async () => {
+    writeFiles({ "package.json": packageJson({ dev: "vite" }) });
+    mocks.spawn.mockImplementation(() => Object.assign(new EventEmitter(), { pid: 777, unref: vi.fn() }));
+    await start("alpha", dir);
+    expect(readJson(devFile("alpha.json"))).toMatchObject({ pid: 777, lstart: "" });
+    expect(psCalls()).toHaveLength(0);
+  });
+
+  it("runs a script with an allowed name, logging its exit code", async () => {
+    writeFiles({ "package.json": packageJson({ "test:unit": "vitest", "@scope/build.x+y-z": "tsc" }), "yarn.lock": "" });
+    await runScript("alpha", dir, "test:unit");
+    expect(launched().steps).toEqual([
+      { label: "yarn run test:unit", command: CMD, args: ["/d", "/s", "/c", '"yarn run test:unit"'], verbatim: true },
+    ]);
+    expect(launched().exitLine).toBe(true);
+    procs.clear();
+    await runScript("alpha", dir, "@scope/build.x+y-z");
+    expect(launched().steps[0].args[3]).toBe('"yarn run @scope/build.x+y-z"');
+  });
+
+  it.each(["lint fix", "a&calc", "x|y", "a^b", "100%", 'say"hi"', "a>b", "wow!", "ünï", "a\tb"])(
+    "refuses to put the script name %j through cmd.exe",
+    async (script) => {
+      writeFiles({ "package.json": packageJson({ [script]: "echo" }) });
+      const err = await devError(runScript("alpha", dir, script));
+      expect(err.status).toBe(400);
+      expect(err.message).toBe(
+        `"${script}" can't be run from workbench on Windows: there a script's name goes through cmd.exe, so it may only use letters, digits and : . _ @ / + -. Run it in a terminal instead.`
+      );
+      expect(mocks.spawn).not.toHaveBeenCalled();
+    }
+  );
+
+  it("knows a process it started is still running, and asks PowerShell only about live pids", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev" });
+    expect(await getStatus("alpha", dir)).toMatchObject({ processRunning: true, task: "dev" });
+    expect(psCalls()).toHaveLength(1);
+
+    procs.clear();
+    groups.clear();
+    mocks.execFile.mockClear();
+    expect((await getStatus("alpha", dir)).processRunning).toBe(false);
+    expect(psCalls()).toHaveLength(0);
+  });
+
+  it("ignores a saved pid that now belongs to another process", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev" });
+    procs.set(501, "639999999999999999");
+    expect((await getStatus("alpha", dir)).processRunning).toBe(false);
+  });
+
+  it("ends the whole tree with taskkill /T, without /F when it goes", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev" });
+    await stop("alpha", dir);
+    expect(taskkills()).toEqual([["/pid", "501", "/T"]]);
+    expect(mocks.execFile.mock.calls.find((c) => c[0] === TASKKILL)![2]).toMatchObject({ windowsHide: true });
+    expect(fs.existsSync(devFile("alpha.json"))).toBe(false);
+  });
+
+  it("uses taskkill /F on a tree still running 5 seconds later", async () => {
+    vi.useFakeTimers();
+    ignoresTerm = true;
+    startedEarlier("script", { pid: 601, kind: "script", script: "test" });
+    const stopping = stopScript("alpha");
+    await vi.advanceTimersByTimeAsync(4800);
+    expect(taskkills()).toEqual([["/pid", "601", "/T"]]);
+    await vi.advanceTimersByTimeAsync(400);
+    await stopping;
+    expect(taskkills()).toEqual([
+      ["/pid", "601", "/T"],
+      ["/pid", "601", "/T", "/F"],
+    ]);
+    expect(groups.has(601)).toBe(false);
+    expect(readLog("script")).toBe("› stopped\n");
+  });
+
+  it("copes with taskkill failing", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev" });
+    groups.delete(501); // PowerShell still sees it, taskkill doesn't
+    procs.set(501, TICKS);
+    vi.spyOn(process, "kill").mockImplementation(((pid: number) => {
+      if (pid === 501) return true;
+      throw new Error("ESRCH");
+    }) as typeof process.kill);
+    vi.useFakeTimers();
+    const stopping = stop("alpha", dir);
+    await vi.advanceTimersByTimeAsync(6000);
+    await stopping;
+    expect(taskkills()).toEqual([
+      ["/pid", "501", "/T"],
+      ["/pid", "501", "/T", "/F"],
+    ]);
+  });
+
+  it("never ends a pid that now belongs to another process", async () => {
+    startedEarlier("dev", { pid: 501, kind: "dev" });
+    procs.set(501, "639999999999999999");
+    await stop("alpha", dir);
+    expect(taskkills()).toEqual([]);
+  });
+
+  it("lists projects whose processes are still ours, with one PowerShell call for the live ones", async () => {
+    const write = (slot: "dev" | "script", name: string, content: object) => {
+      const folder = slot === "dev" ? devFile() : devFile("scripts");
+      fs.mkdirSync(folder, { recursive: true });
+      fs.writeFileSync(path.join(folder, `${name}.json`), JSON.stringify(content));
+    };
+    write("dev", "alpha", { pid: 11, lstart: TICKS });
+    write("script", "beta", { pid: 12, lstart: TICKS });
+    write("dev", "gamma", { pid: 13, lstart: TICKS }); // gone
+    write("dev", "delta", { pid: 14, lstart: TICKS }); // pid reused
+    write("script", "alpha", { pid: 11, lstart: TICKS }); // same pid twice: asked about once
+    for (const pid of [11, 12, 14]) groups.add(pid);
+    procs.set(11, TICKS);
+    procs.set(12, TICKS);
+    procs.set(14, "639999999999999999");
+
+    const result = await runningProjects();
+
+    expect(psCalls()).toHaveLength(1);
+    const asked = psCalls()[0][1][4].match(/^Get-Process -Id ([\d,]+) /)[1].split(",");
+    expect(asked.sort()).toEqual(["11", "12", "14"]);
+    expect(result.projects).toEqual([
+      { name: "alpha", ports: [] },
+      { name: "beta", ports: [] },
+    ]);
+  });
+
+  it("finds nothing running when PowerShell fails without output, or no pid is alive", async () => {
+    startedEarlier("dev", { pid: 11, kind: "dev" });
+    mocks.execFile.mockImplementation((_cmd: string, _args: string[], _opts: object, cb: (e: Error) => void) => cb(new Error("no powershell")));
+    expect((await runningProjects()).projects).toEqual([]);
+    groups.clear();
+    mocks.execFile.mockClear();
+    expect((await runningProjects()).projects).toEqual([]);
+    expect(mocks.execFile).not.toHaveBeenCalled();
+  });
+
+  // platform.ts sets the variable when it loads (see hardenExeSearch), so each test loads fresh copies.
+  async function freshDevEnv() {
+    vi.resetModules();
+    return (await import("./devenv")).devEnv;
+  }
+
+  it("passes on a NoDefaultCurrentDirectoryInExePath the user set", async () => {
+    vi.stubEnv("NoDefaultCurrentDirectoryInExePath", "1");
+    const fresh = await freshDevEnv();
+    expect(fresh().NoDefaultCurrentDirectoryInExePath).toBe("1");
+  });
+
+  it("leaves out the NoDefaultCurrentDirectoryInExePath workbench set itself", async () => {
+    vi.stubEnv("NoDefaultCurrentDirectoryInExePath", undefined);
+    const fresh = await freshDevEnv();
+    expect(process.env.NoDefaultCurrentDirectoryInExePath).toBe("1");
+    expect(fresh()).not.toHaveProperty("NoDefaultCurrentDirectoryInExePath");
+  });
+});
+
+// The launcher itself, run for real with this Node: the same script runs on Windows.
+describe("WINDOWS_LAUNCHER", () => {
+  async function launch(steps: object[], exitLine: boolean) {
+    const { spawnSync } = await vi.importActual<typeof import("child_process")>("child_process");
+    const r = spawnSync(process.execPath, ["-e", WINDOWS_LAUNCHER, JSON.stringify({ steps, exitLine })], { encoding: "utf-8" });
+    return { stdout: r.stdout.replace(/\r\n/g, "\n"), stderr: r.stderr, status: r.status };
+  }
+  const nodeStep = (label: string, code: string) => ({ label, command: process.execPath, args: ["-e", code] });
+
+  it("runs the steps in order, stopping at the first that fails, and logs the exit code", async () => {
+    const result = await launch(
+      [
+        nodeStep("one", "console.log('hi')"),
+        nodeStep("two", "console.error('oops'); process.exit(3)"),
+        nodeStep("three", "console.log('never')"),
+      ],
+      true
+    );
+    expect(result).toEqual({ stdout: "› one\nhi\n› two\n› exited with code 3\n", stderr: "oops\n", status: 3 });
+  });
+
+  it("leaves the exit code out of a dev run", async () => {
+    expect(await launch([nodeStep("dev", "process.exit(0)")], false)).toMatchObject({ stdout: "› dev\n", status: 0 });
+  });
+
+  it("logs a step that can't be started", async () => {
+    const result = await launch([{ label: "missing", command: path.join(root, "no-such-program"), args: [] }], true);
+    expect(result.stdout).toMatch(/^› missing\nspawn .*no-such-program ENOENT\n› exited with code 1\n$/);
+    expect(result.status).toBe(1);
+  });
+
+  it("logs a step it can't even try", async () => {
+    const result = await launch([{ label: "bad", command: 42, args: [] }], true);
+    expect(result.stdout).toMatch(/^› bad\n.+\n› exited with code 1\n$/);
+  });
+
+  // The cmd.exe command line as devenv builds it for a package manager, run for real.
+  it.runIf(realPlatform === "win32")("runs a fixed cmd.exe command line as is", async () => {
+    const cmd = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+    const result = await launch([{ label: "echo", command: cmd, args: ["/d", "/s", "/c", '"echo hi&& exit 4"'], verbatim: true }], true);
+    expect(result).toMatchObject({ stdout: "› echo\nhi\n› exited with code 4\n", status: 4 });
   });
 });

@@ -170,7 +170,7 @@ describe("node", () => {
     nodeVersion(installed);
     write({ ".nvmrc": nvmrc });
     expect(await check("node")).toEqual({ id: "node", level: "ok", title });
-    expect(execFile).toHaveBeenCalledWith("node", ["--version"], { timeout: 5_000 }, expect.any(Function));
+    expect(execFile).toHaveBeenCalledWith("node", ["--version"], { timeout: 5_000, windowsHide: true }, expect.any(Function));
   });
 
   it.each([

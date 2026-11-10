@@ -56,6 +56,8 @@ function uninstallAll() {
 
 /** Paths that exist as far as the VS Code fallback can tell. */
 const LINUX_CODE = ["/usr/bin/code", "/snap/bin/code", "/usr/share/code/bin/code"];
+/** Code.exe on Windows, with %LOCALAPPDATA% and %ProgramFiles% pointed at a drive no machine has. */
+const WINDOWS_CODE = ["Q:\\Local\\Programs\\Microsoft VS Code\\Code.exe", "Q:\\Programs\\Microsoft VS Code\\Code.exe"];
 let existing = new Set<string>();
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
@@ -89,7 +91,9 @@ beforeEach(() => {
   uninstallAll();
   existing = new Set();
   const realExists = fs.existsSync;
-  vi.spyOn(fs, "existsSync").mockImplementation((p) => (LINUX_CODE.includes(String(p)) ? existing.has(String(p)) : realExists(p)));
+  vi.spyOn(fs, "existsSync").mockImplementation((p) =>
+    LINUX_CODE.includes(String(p)) || WINDOWS_CODE.includes(String(p)) ? existing.has(String(p)) : realExists(p)
+  );
   setPlatform("darwin");
 });
 
@@ -173,8 +177,8 @@ describe("POST /api/open in VS Code", () => {
     expect(commands()[1]).toEqual(["/snap/bin/code", [alpha]]);
   });
 
-  it("doesn't fall back on Windows", async () => {
-    setPlatform("win32");
+  it("doesn't fall back on other systems", async () => {
+    setPlatform("freebsd");
     existing.add("/usr/bin/code");
     child.outcome.mockImplementation(() => enoent());
     const res = await POST(post({ projectName: "alpha" }));
@@ -226,12 +230,12 @@ describe("POST /api/open in Terminal", () => {
     expect(child.spawn).not.toHaveBeenCalled();
   });
 
-  it("501s on Windows", async () => {
-    setPlatform("win32");
+  it("501s on other systems", async () => {
+    setPlatform("freebsd");
     install(bin, "xterm");
     const res = await POST(post({ projectName: "alpha", app: "terminal" }));
     expect(res.status).toBe(501);
-    expect(await res.json()).toEqual({ error: "Open in Terminal only works on macOS and Linux" });
+    expect(await res.json()).toEqual({ error: "Open in Terminal only works on macOS, Linux and Windows" });
     expect(child.execFile).not.toHaveBeenCalled();
     expect(child.spawn).not.toHaveBeenCalled();
   });
@@ -304,7 +308,8 @@ describe("POST /api/open in a terminal on Linux", () => {
     expect(spawned()).toEqual([[kitty, ["--directory", alpha]]]);
   });
 
-  it("accepts $TERMINAL as a full path to a terminal it doesn't know", async () => {
+  // A Windows path (C:\…) has no "/", so it can't be read the POSIX way there.
+  it.skipIf(realPlatform === "win32")("accepts $TERMINAL as a full path to a terminal it doesn't know", async () => {
     install(bin, "xterm");
     const mine = install(root, "my-term");
     vi.stubEnv("TERMINAL", mine);
@@ -324,7 +329,8 @@ describe("POST /api/open in a terminal on Linux", () => {
     expect(spawned()).toEqual([[xterm, []]]);
   });
 
-  it("skips files that aren't executable, folders and relative PATH entries", async () => {
+  // chmod can't take the executable bit away on Windows.
+  it.skipIf(realPlatform === "win32")("skips files that aren't executable, folders and relative PATH entries", async () => {
     install(bin, "gnome-terminal", 0o644);
     fs.mkdirSync(path.join(bin, "konsole"));
     vi.stubEnv("PATH", ["relative-bin", "", bin, otherBin].join(path.delimiter));
@@ -358,7 +364,8 @@ describe("POST /api/open in a terminal on Linux", () => {
     expect(child.state.unref).not.toHaveBeenCalled();
   });
 
-  it("passes a folder with spaces and quotes as one argument", async () => {
+  // Windows doesn't allow quotes in a folder name.
+  it.skipIf(realPlatform === "win32")("passes a folder with spaces and quotes as one argument", async () => {
     const odd = path.join(projects, `it's "odd" $(x)`);
     fs.mkdirSync(odd, { recursive: true });
     const gnome = install(bin, "gnome-terminal");
@@ -366,6 +373,77 @@ describe("POST /api/open in a terminal on Linux", () => {
     expect(res.status).toBe(200);
     expect(spawned()).toEqual([[gnome, [`--working-directory=${odd}`]]]);
     fs.rmSync(odd, { recursive: true });
+  });
+});
+
+describe("POST /api/open on Windows", () => {
+  const [USER_CODE] = WINDOWS_CODE;
+  const opts = () => child.spawn.mock.calls[0][2] as Record<string, unknown> & { env: NodeJS.ProcessEnv };
+
+  beforeEach(() => {
+    setPlatform("win32");
+    vi.stubEnv("LOCALAPPDATA", "Q:\\Local");
+    vi.stubEnv("ProgramFiles", "Q:\\Programs");
+    vi.stubEnv("PATHEXT", ".EXE;.CMD");
+    vi.stubEnv("SystemRoot", "Q:\\Windows");
+    vi.stubEnv("PATH", [bin, otherBin].join(";"));
+  });
+
+  it("starts Code.exe itself with the folder and file, never code.cmd", async () => {
+    existing.add(USER_CODE);
+    install(bin, "code.cmd");
+    const res = await POST(post({ projectName: "alpha", file: "src/index.ts" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(spawned()).toEqual([[USER_CODE, [alpha, path.join(alpha, "src", "index.ts")]]]);
+    expect(opts()).toMatchObject({ cwd: alpha, detached: true, stdio: "ignore" });
+    expect(opts()).not.toHaveProperty("shell");
+    expect(opts()).not.toHaveProperty("windowsVerbatimArguments");
+    expect(opts().env).not.toHaveProperty("WORKBENCH_PROJECTS_DIR");
+    expect(child.state.unref).toHaveBeenCalled();
+    expect(child.execFile).not.toHaveBeenCalled();
+  });
+
+  it("says when there's no Code.exe", async () => {
+    const res = await POST(post({ projectName: "alpha" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Couldn't open VS Code: Code.exe wasn't found. Is VS Code installed?" });
+    expect(child.spawn).not.toHaveBeenCalled();
+    expect(child.execFile).not.toHaveBeenCalled();
+  });
+
+  it("reports Code.exe failing to start", async () => {
+    existing.add(WINDOWS_CODE[1]);
+    child.state.spawnError = new Error("spawn EPERM");
+    const res = await POST(post({ projectName: "alpha" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Couldn't open VS Code: spawn EPERM" });
+  });
+
+  it("opens Windows Terminal in the project folder, which is never an argument", async () => {
+    const wt = install(otherBin, "wt.exe");
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(200);
+    expect(spawned()).toEqual([[wt, ["-d", "."]]]);
+    expect(opts()).toMatchObject({ cwd: alpha, detached: true, stdio: "ignore" });
+    // A window to look at: not hidden.
+    expect(opts()).not.toHaveProperty("windowsHide");
+  });
+
+  it("opens a Command Prompt without Windows Terminal, through a fixed command line", async () => {
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(200);
+    const cmd = "Q:\\Windows\\System32\\cmd.exe";
+    expect(spawned()).toEqual([[cmd, ["/d", "/s", "/c", `"start "" "${cmd}""`]]]);
+    expect(opts()).toMatchObject({ cwd: alpha, detached: true, windowsVerbatimArguments: true });
+    expect(JSON.stringify(child.spawn.mock.calls[0][1])).not.toContain("alpha");
+  });
+
+  it("reports a terminal that fails to start", async () => {
+    child.state.spawnError = new Error("spawn ENOENT");
+    const res = await POST(post({ projectName: "alpha", app: "terminal" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Couldn't open a terminal: spawn ENOENT" });
   });
 });
 

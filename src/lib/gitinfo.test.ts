@@ -97,6 +97,9 @@ beforeAll(() => {
       "  gpgsign = false",
       "[advice]",
       "  detachedHead = false",
+      // Git for Windows' own config turns this on; files must keep their LF endings.
+      "[core]",
+      "  autocrlf = false",
       "",
     ].join("\n")
   );
@@ -118,7 +121,13 @@ beforeEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(root, { recursive: true, force: true });
+  // Git makes its object files read-only, which Windows can refuse to delete.
+  // A leftover temp folder there is harmless; anywhere else it's a bug.
+  try {
+    fs.rmSync(root, { recursive: true, force: true });
+  } catch (e) {
+    if (process.platform !== "win32") throw e;
+  }
 });
 
 describe("gitHistory", () => {
@@ -265,7 +274,8 @@ describe("fetchRemotes", () => {
 
   it("turns a missing remote into a GitError with git's message", async () => {
     const { local, remote } = setup("fetch-gone");
-    fs.rmSync(remote, { recursive: true, force: true });
+    // Moved rather than deleted: Windows can refuse to delete git's read-only object files.
+    fs.renameSync(remote, `${remote}-gone`);
     const error = await fetchRemotes(local).catch((e) => e);
     expect(error).toBeInstanceOf(GitError);
     // Only the last two stderr lines survive, joined on one line: here that's

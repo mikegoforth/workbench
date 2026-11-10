@@ -63,7 +63,9 @@ beforeAll(() => {
   fs.mkdirSync(home);
   fs.writeFileSync(
     path.join(home, ".gitconfig"),
-    "[user]\n  name = Test Author\n  email = test@example.com\n[init]\n  defaultBranch = main\n[commit]\n  gpgsign = false\n[advice]\n  detachedHead = false\n"
+    "[user]\n  name = Test Author\n  email = test@example.com\n[init]\n  defaultBranch = main\n[commit]\n  gpgsign = false\n[advice]\n  detachedHead = false\n" +
+      // scan.ts runs git with the system config, which on Windows turns this on.
+      "[core]\n  autocrlf = false\n"
   );
 });
 
@@ -88,7 +90,13 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(root, { recursive: true, force: true });
+  // Git makes its object files read-only, which Windows can refuse to delete.
+  // A leftover temp folder there is harmless; anywhere else it's a bug.
+  try {
+    fs.rmSync(root, { recursive: true, force: true });
+  } catch (e) {
+    if (process.platform !== "win32") throw e;
+  }
 });
 
 describe("scanProject", () => {

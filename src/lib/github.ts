@@ -104,7 +104,7 @@ export async function githubStatus(dir: string, { fresh = false } = {}): Promise
         "-f", `name=${repo.name}`,
         "-f", `ref=refs/heads/${branch}`,
       ],
-      { timeout: 20_000, maxBuffer: 5 * 1024 * 1024 }
+      { timeout: 20_000, maxBuffer: 5 * 1024 * 1024, windowsHide: true }
     ));
   } catch (e) {
     throw new GitHubError(502, ghMessage(e));

@@ -27,7 +27,10 @@ const ORBSTACK_APP = "/Applications/OrbStack.app";
 const VSCODE_APP = "/Applications/Visual Studio Code.app";
 const LINUX_DOCKER_DESKTOP = "/opt/docker-desktop";
 const LINUX_VSCODE = ["/usr/share/code", "/usr/bin/code", "/snap/bin/code"];
-const WATCHED = new Set([NVM, DOCKER_APP, ORBSTACK_APP, VSCODE_APP, LINUX_DOCKER_DESKTOP, ...LINUX_VSCODE]);
+// Windows install locations, with %ProgramFiles% and %LOCALAPPDATA% pointed at a Q: drive in those tests.
+const WINDOWS_DOCKER = "Q:\\Programs\\Docker\\Docker\\Docker Desktop.exe";
+const WINDOWS_VSCODE = "Q:\\Local\\Programs\\Microsoft VS Code\\Code.exe";
+const WATCHED = new Set([NVM, DOCKER_APP, ORBSTACK_APP, VSCODE_APP, LINUX_DOCKER_DESKTOP, ...LINUX_VSCODE, WINDOWS_DOCKER, WINDOWS_VSCODE]);
 
 const realPlatform = process.platform;
 const setPlatform = (platform: NodeJS.Platform) =>
@@ -108,7 +111,7 @@ describe("checkRequirements", () => {
       ["gh", true, "2.62.0"],
       ["vscode", true, "1.95.3"],
     ]);
-    expect(execFile).toHaveBeenCalledWith("gh", ["auth", "status"], { timeout: 10_000 }, expect.any(Function));
+    expect(execFile).toHaveBeenCalledWith("gh", ["auth", "status"], { timeout: 10_000, windowsHide: true }, expect.any(Function));
   });
 
   it("is still ok without the optional ones", async () => {
@@ -345,12 +348,67 @@ describe("on Linux", () => {
 });
 
 describe("on Windows", () => {
-  it("has no app locations to fall back on", async () => {
+  beforeEach(() => {
     setPlatform("win32");
+    vi.stubEnv("ProgramFiles", "Q:\\Programs");
+    vi.stubEnv("LOCALAPPDATA", "Q:\\Local");
+    vi.stubEnv("PATH", "");
+    vi.stubEnv("NVM_HOME", "");
+  });
+
+  it("is ok when everything is installed, finding VS Code by its Code.exe without running code.cmd", async () => {
+    existing.add(WINDOWS_VSCODE);
+    const result = await checkRequirements();
+    expect(result.ok).toBe(true);
+    expect(result.requirements.map((r) => [r.id, r.ok, r.found])).toEqual([
+      ["node", true, "22.12.0"],
+      ["docker", true, "27.3.1"],
+      ["git", true, "2.47.0"],
+      ["gh", true, "2.62.0"],
+      ["vscode", true, null],
+    ]);
+    expect(execFile.mock.calls.some(([cmd]) => cmd === "code")).toBe(false);
+  });
+
+  it("explains a missing VS Code, ignoring macOS and Linux locations", async () => {
+    existing.add(VSCODE_APP).add("/usr/bin/code");
+    expect(await requirement("vscode")).toMatchObject({ ok: false, detail: "Not found. workbench opens projects and files in it." });
+  });
+
+  it("links to Docker Desktop for Windows", async () => {
     outputs["docker --version"] = null;
-    outputs["code --version"] = null;
-    existing.add(DOCKER_APP).add(VSCODE_APP).add(LINUX_DOCKER_DESKTOP).add("/usr/bin/code");
-    expect(await requirement("docker")).toMatchObject({ ok: false, detail: "Not found. It's needed for projects with a compose file." });
-    expect(await requirement("vscode")).toMatchObject({ ok: false });
+    expect(await requirement("docker")).toMatchObject({
+      ok: false,
+      need: "Docker Desktop",
+      detail: "Not found. It's needed for projects with a compose file.",
+      help: [{ label: "Get Docker Desktop for Windows", url: "https://docs.docker.com/desktop/setup/install/windows-install/" }],
+    });
+  });
+
+  it("notices Docker Desktop installed without its command on PATH", async () => {
+    outputs["docker --version"] = null;
+    existing.add(DOCKER_APP).add(WINDOWS_DOCKER);
+    expect(await requirement("docker")).toMatchObject({
+      ok: false,
+      detail: "Docker Desktop is installed, but the docker command isn't available.",
+      hint: expect.stringContaining("restart workbench"),
+    });
+  });
+
+  it("links to Git for Windows and suggests winget", async () => {
+    outputs["git --version"] = null;
+    expect(await requirement("git")).toMatchObject({
+      ok: false,
+      help: [{ label: "Download Git", url: "https://git-scm.com/download/win" }],
+      hint: expect.stringContaining("winget install --id Git.Git -e"),
+    });
+  });
+
+  it("suggests nvm-windows when NVM_HOME is set, and ignores ~/.nvm", async () => {
+    outputs["node --version"] = "v20.0.0\n";
+    existing.add(NVM);
+    expect((await requirement("node"))?.hint).toBeUndefined();
+    vi.stubEnv("NVM_HOME", "Q:\\nvm");
+    expect((await requirement("node"))?.hint).toBe("You have nvm-windows: run nvm install lts, then nvm use lts");
   });
 });

@@ -73,7 +73,7 @@ async function githubBatch(repos: GitHubRepo[], fresh: boolean) {
   let stdout = "";
   let error: string | null = null;
   try {
-    ({ stdout } = await run("gh", args, { timeout: 30_000, maxBuffer: 10 * 1024 * 1024 }));
+    ({ stdout } = await run("gh", args, { timeout: 30_000, maxBuffer: 10 * 1024 * 1024, windowsHide: true }));
   } catch (e) {
     // gh exits non-zero when any repo errors but still prints the data it got.
     const err = e as NodeJS.ErrnoException & { stdout?: string; stderr?: string };

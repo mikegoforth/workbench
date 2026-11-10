@@ -4,6 +4,10 @@ import path from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { findReadme, resolveFileIn } from "./files";
 
+// Creating symlinks on Windows needs admin rights or Developer Mode: the
+// symlink cases only run elsewhere.
+const symlinks = process.platform !== "win32";
+
 let root: string;
 let project: string;
 
@@ -19,9 +23,11 @@ beforeAll(() => {
   fs.writeFileSync(path.join(root, "project-secrets", "key"), "secret");
   fs.writeFileSync(path.join(root, "outside.txt"), "outside");
   // Symlinks a cloned repo could ship.
-  fs.symlinkSync(path.join(root, "outside.txt"), path.join(project, "escape.txt"));
-  fs.symlinkSync(root, path.join(project, "escape-dir"));
-  fs.symlinkSync(path.join(project, "package.json"), path.join(project, "inside-link.json"));
+  if (symlinks) {
+    fs.symlinkSync(path.join(root, "outside.txt"), path.join(project, "escape.txt"));
+    fs.symlinkSync(root, path.join(project, "escape-dir"));
+    fs.symlinkSync(path.join(project, "package.json"), path.join(project, "inside-link.json"));
+  }
 });
 
 afterAll(() => {
@@ -35,7 +41,7 @@ describe("resolveFileIn", () => {
     expect(resolveFileIn(project, "docs/../package.json")).toBe(path.join(project, "package.json"));
   });
 
-  it("follows a symlink that stays inside", () => {
+  it.skipIf(!symlinks)("follows a symlink that stays inside", () => {
     expect(resolveFileIn(project, "inside-link.json")).toBe(path.join(project, "package.json"));
   });
 
@@ -43,12 +49,19 @@ describe("resolveFileIn", () => {
     ["a parent path", "../outside.txt"],
     ["a sibling with a matching prefix", "../project-secrets/key"],
     ["an absolute path", "/etc/hosts"],
-    ["a symlink to a file outside", "escape.txt"],
-    ["a path through a symlinked folder", "escape-dir/outside.txt"],
+    // A parent path on Windows; a (missing) file name elsewhere.
+    ["a parent path with backslashes", "..\\outside.txt"],
     ["a folder", "docs"],
     ["the folder itself", "."],
     ["a missing file", "nope.txt"],
     ["an empty path", ""],
+  ])("refuses %s", (_label, file) => {
+    expect(resolveFileIn(project, file)).toBeNull();
+  });
+
+  it.skipIf(!symlinks).each([
+    ["a symlink to a file outside", "escape.txt"],
+    ["a path through a symlinked folder", "escape-dir/outside.txt"],
   ])("refuses %s", (_label, file) => {
     expect(resolveFileIn(project, file)).toBeNull();
   });

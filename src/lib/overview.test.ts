@@ -141,7 +141,13 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(root, { recursive: true, force: true });
+  // Git makes its object files read-only, which Windows can refuse to delete.
+  // A leftover temp folder there is harmless; anywhere else it's a bug.
+  try {
+    fs.rmSync(root, { recursive: true, force: true });
+  } catch (e) {
+    if (process.platform !== "win32") throw e;
+  }
 });
 
 describe("buildOverview", () => {
@@ -194,7 +200,7 @@ describe("buildOverview", () => {
     const [cmd, args, options] = runGh.mock.calls[0];
     expect(cmd).toBe("gh");
     expect(args.slice(0, 2)).toEqual(["api", "graphql"]);
-    expect(options).toEqual({ timeout: 30_000, maxBuffer: 10 * 1024 * 1024 });
+    expect(options).toEqual({ timeout: 30_000, maxBuffer: 10 * 1024 * 1024, windowsHide: true });
     const { query, repos } = askedRepos(args);
     expect(repos).toHaveLength(2);
     expect(repos).toEqual(

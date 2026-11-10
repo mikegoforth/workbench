@@ -7,6 +7,10 @@ import { GET } from "./route";
 
 // Everything is real here: the guard, project names and file resolution, against
 // a temporary projects folder.
+// Creating symlinks on Windows needs admin rights or Developer Mode: the
+// symlink case only runs elsewhere.
+const symlinks = process.platform !== "win32";
+
 const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workbench-api-file-")));
 const projects = path.join(root, "projects");
 const alpha = path.join(projects, "alpha");
@@ -19,7 +23,7 @@ fs.writeFileSync(path.join(alpha, "icon.svg"), "<svg/>");
 fs.writeFileSync(path.join(alpha, "notes.txt"), "text");
 fs.writeFileSync(path.join(projects, ".hidden", "a.png"), png);
 fs.writeFileSync(path.join(root, "secret.png"), "outside");
-fs.symlinkSync(path.join(root, "secret.png"), path.join(alpha, "link.png"));
+if (symlinks) fs.symlinkSync(path.join(root, "secret.png"), path.join(alpha, "link.png"));
 // Sparse: no real 10 MB written.
 fs.writeFileSync(path.join(alpha, "huge.png"), "");
 fs.truncateSync(path.join(alpha, "huge.png"), 10 * 1024 * 1024 + 1);
@@ -77,9 +81,14 @@ describe("GET /api/file", () => {
     ["a folder", q("alpha", "docs")],
     ["a path out of the project", q("alpha", "../../secret.png")],
     ["an absolute path", q("alpha", path.join(root, "secret.png"))],
-    ["a symlink out of the project", q("alpha", "link.png")],
   ])("404s for %s", async (_label, query) => {
     const res = await GET(get(query));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Image not found" });
+  });
+
+  it.skipIf(!symlinks)("404s for a symlink out of the project", async () => {
+    const res = await GET(get(q("alpha", "link.png")));
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Image not found" });
   });

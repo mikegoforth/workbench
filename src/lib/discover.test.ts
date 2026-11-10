@@ -11,6 +11,12 @@ const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workbench-di
 let home: string;
 let n = 0;
 
+/** How a folder under home is shown: ~/code, or ~\\code on Windows. */
+const tilde = (...parts: string[]) => path.join("~", ...parts);
+
+const realPlatform = process.platform;
+const setPlatform = (p: NodeJS.Platform) => Object.defineProperty(process, "platform", { value: p, configurable: true });
+
 function mkdir(...parts: string[]) {
   const dir = path.join(home, ...parts);
   fs.mkdirSync(dir, { recursive: true });
@@ -43,6 +49,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setPlatform(realPlatform);
 });
 
 afterAll(() => {
@@ -61,15 +68,15 @@ describe("discoverProjectRoots", () => {
     // home, code, work, and the three repos.
     expect(result.scannedDirs).toBe(6);
     expect(result.roots).toEqual([
-      { dir: path.join(home, "code"), display: "~/code", repos: ["alpha", "beta"], github: ["me/alpha"] },
-      { dir: path.join(home, "work"), display: "~/work", repos: ["gamma"], github: ["acme/gamma"] },
+      { dir: path.join(home, "code"), display: tilde("code"), repos: ["alpha", "beta"], github: ["me/alpha"] },
+      { dir: path.join(home, "work"), display: tilde("work"), repos: ["gamma"], github: ["acme/gamma"] },
     ]);
   });
 
   it("scans the home folder by default", async () => {
     repo("code/alpha");
     const { roots } = await discoverProjectRoots();
-    expect(roots.map((r) => r.display)).toEqual(["~/code"]);
+    expect(roots.map((r) => r.display)).toEqual([tilde("code")]);
   });
 
   it("ranks by GitHub repos, then repos, then path", async () => {
@@ -90,8 +97,8 @@ describe("discoverProjectRoots", () => {
     for (let i = 0; i < 17; i++) repo(`group${String(i).padStart(2, "0")}/repo`);
     const { roots } = await discoverProjectRoots(home);
     expect(roots).toHaveLength(15);
-    expect(roots[0].display).toBe("~/group00");
-    expect(roots[14].display).toBe("~/group14");
+    expect(roots[0].display).toBe(tilde("group00"));
+    expect(roots[14].display).toBe(tilde("group14"));
   });
 
   it("stops at a repo instead of looking inside it", async () => {
@@ -136,14 +143,34 @@ describe("discoverProjectRoots", () => {
     repo("go/src/tool");
     repo("code/Library/repo");
     const { roots } = await discoverProjectRoots(home);
-    expect(roots.map((r) => r.display).sort()).toEqual(["~/code/Library", "~/go/src"]);
+    expect(roots.map((r) => r.display).sort()).toEqual([tilde("code", "Library"), tilde("go", "src")]);
   });
 
-  it("doesn't follow symlinks", async () => {
+  // Making a symlink on Windows needs admin rights or Developer Mode.
+  it.skipIf(realPlatform === "win32")("doesn't follow symlinks", async () => {
     repo("code/app");
     fs.symlinkSync(path.join(home, "code"), path.join(home, "link"));
     const { roots } = await discoverProjectRoots(home);
     expect(roots.map((r) => r.dir)).toEqual([path.join(home, "code")]);
+  });
+
+  it("also skips AppData, scoop and the shell folders at the top of a Windows home folder, whatever their case", async () => {
+    setPlatform("win32");
+    for (const skipped of ["AppData/Local/proj", "scoop/buckets/main", "saved games/x", "Favorites/x", "3D Objects/x", "Library/x"]) {
+      repo(skipped);
+    }
+    repo("code/AppData/repo");
+    repo("source/repos/app");
+    const { roots } = await discoverProjectRoots(home);
+    expect(roots.map((r) => r.display).sort()).toEqual([tilde("code", "AppData"), tilde("source", "repos")]);
+  });
+
+  it("only skips the Windows folders on Windows", async () => {
+    setPlatform("darwin");
+    repo("AppData/proj");
+    repo("scoop/main");
+    const { roots } = await discoverProjectRoots(home);
+    expect(roots.map((r) => r.display).sort()).toEqual([tilde("AppData"), tilde("scoop")]);
   });
 
   it("returns nothing for a folder it can't read", async () => {
