@@ -64,7 +64,7 @@ const SIGNAL_EXITS = new Set([130, 137, 143]);
 const RECENT_MS = 24 * 60 * 60_000;
 
 /** One word (and tone) for a service's container. */
-export function serviceState(s: DevService): { label: string; tone: Tone; up: boolean } {
+export function serviceState(s: Pick<DevService, "state" | "health" | "oomKilled" | "exitCode" | "finishedAt">): { label: string; tone: Tone; up: boolean } {
   if (s.state === "not created") return { label: "Not created", tone: "neutral", up: false };
   if (s.state === "restarting") return { label: "Restarting", tone: "bad", up: true };
   if (s.state === "paused") return { label: "Paused", tone: "warn", up: true };

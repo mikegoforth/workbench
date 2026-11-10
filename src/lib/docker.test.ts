@@ -694,6 +694,26 @@ describe("containerProblems", () => {
   });
 });
 
+describe("problemKinds", () => {
+  it("judges containers outside projects by the same rules, a stack per folder", async () => {
+    const { problemKinds } = await load();
+    const other = { project: null, stack: "tools", workingDir: "/elsewhere/tools" };
+    const loop = container({ ...other, name: "tools-loop-1", state: "restarting", startedAt: null });
+    const up = container({ ...other, name: "tools-api-1", startedAt: ago(5 * DAY) });
+    // Exited during the stack's current run, days ago: still a problem.
+    const job = container({ ...other, name: "tools-job-1", state: "exited", exitCode: 2, startedAt: null, finishedAt: ago(4 * DAY) });
+    // Same compose name in another folder that isn't up: an old exit there is history.
+    const elsewhere = container({ ...other, workingDir: "/other/tools", name: "tools-job-2", state: "exited", exitCode: 2, startedAt: null, finishedAt: ago(4 * DAY) });
+    const loose = container({ project: null, stack: null, service: null, workingDir: null, name: "qdrant", state: "exited", exitCode: 1, startedAt: null, finishedAt: ago(HOUR) });
+    const kinds = problemKinds([loop, up, job, elsewhere, loose]);
+    expect(kinds.get(loop)).toEqual({ kind: "restarting", exitCode: null });
+    expect(kinds.get(job)).toEqual({ kind: "exited", exitCode: 2 });
+    expect(kinds.get(loose)).toEqual({ kind: "exited", exitCode: 1 });
+    expect(kinds.has(up)).toBe(false);
+    expect(kinds.has(elsewhere)).toBe(false);
+  });
+});
+
 describe("composeConfig", () => {
   let dir: string;
   beforeEach(() => {

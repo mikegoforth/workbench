@@ -8,6 +8,7 @@ import { changedCount, openTodoCount, projectStatus } from "@/lib/status";
 import type { ContainerProblem, DockerDaemon, Overview, ProjectInfo, ProjectsDirInfo, RequirementsResult } from "@/lib/types";
 import { useShortcut } from "@/lib/useShortcut";
 import ActivityView from "./ActivityView";
+import ContainersView from "./ContainersView";
 import AppBar from "./AppBar";
 import AttentionView from "./AttentionView";
 import DashboardView from "./DashboardView";
@@ -620,6 +621,8 @@ export default function Dashboard() {
         break;
       case "ports":
         content = <PortsView ctx={ctx} />;
+      case "containers":
+        content = <ContainersView ctx={ctx} />;
         break;
       case "attention":
         content = <AttentionView ctx={ctx} items={derived.attention} />;
@@ -669,7 +672,8 @@ export default function Dashboard() {
         )}
         <div className="flex min-w-0 flex-1 flex-col">
           <UpdateBanner />
-          {docker && (docker.state === "stopped" || docker.state === "error") && !dockerDismissed && (
+          {/* The Containers page says it in place of its table. */}
+          {docker && (docker.state === "stopped" || docker.state === "error") && !dockerDismissed && !(route.view === "containers" && !route.project) && (
             <DockerNotice docker={docker} starting={dockerStarting} onStart={startDocker} onDismiss={() => setDockerDismissed(true)} />
           )}
           <main key={route.project ?? route.view} className="min-h-0 flex-1 overflow-y-auto">

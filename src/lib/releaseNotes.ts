@@ -37,6 +37,10 @@ export const RELEASES: Release[] = [
       },
       {
         kind: "new",
+        text: "Containers page: every Docker container on this computer, by project and compose stack, with health, ports, uptime, CPU and memory. Problems come first; Start, Stop or Restart a project's stacks, and find leftover containers that belong to no project (Stop or Remove them, after you confirm).",
+      },
+      {
+        kind: "new",
         text: "Ports: every TCP port listening on your computer and what's using it (a project's dev server or script, a Docker container, or another app), flagging any open beyond localhost. Open web ports in the browser, and stop what workbench runs right from the list.",
       },
       {

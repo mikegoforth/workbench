@@ -288,37 +288,48 @@ export const isUp = (c: { state: string }) => c.state === "running" || c.state =
 
 // ---- Problems --------------------------------------------------------------
 
+export type ProblemKind = Pick<ContainerProblem, "kind" | "exitCode">;
+
 /**
- * Containers that need a look, per project: failing health checks, restart
- * loops, and error exits that happened during the stack's current run or in
- * the last day. Old exits and normal stops (SIGTERM / SIGKILL) don't count.
+ * Which containers need a look, and why: failing health checks, restart loops,
+ * and error exits that happened during the stack's current run or in the last
+ * day. Old exits and normal stops (SIGTERM / SIGKILL) don't count. Covers every
+ * container, in a project or not.
  */
-export function containerProblems(containers: Container[], now = Date.now()): Map<string, ContainerProblem[]> {
-  const out = new Map<string, ContainerProblem[]>();
+export function problemKinds(containers: Container[], now = Date.now()): Map<Container, ProblemKind> {
+  const out = new Map<Container, ProblemKind>();
+  // A stack is one compose project in one place: its project, or its folder when it has none.
+  const stackKey = (c: Container) => `${c.project ?? c.workingDir}\0${c.stack}`;
   // When each stack's running containers came up: an exit after that happened during this run.
   const upSince = new Map<string, number>();
   for (const c of containers) {
-    if (!c.project || !c.stack || !isUp(c) || !c.startedAt) continue;
-    const key = `${c.project}\0${c.stack}`;
+    if (!c.stack || !isUp(c) || !c.startedAt) continue;
+    const key = stackKey(c);
     upSince.set(key, Math.min(upSince.get(key) ?? Infinity, Date.parse(c.startedAt)));
   }
   for (const c of containers) {
-    if (!c.project) continue;
-    const base = { stack: c.stack ?? c.name, service: c.service ?? c.name };
-    let problem: ContainerProblem | null = null;
-    if (c.state === "restarting") problem = { ...base, kind: "restarting", exitCode: null };
-    else if (c.state === "running" && c.health === "unhealthy") problem = { ...base, kind: "unhealthy", exitCode: null };
+    if (c.state === "restarting") out.set(c, { kind: "restarting", exitCode: null });
+    else if (c.state === "running" && c.health === "unhealthy") out.set(c, { kind: "unhealthy", exitCode: null });
     else if (c.exitCode && (c.oomKilled || !SIGNAL_EXITS.has(c.exitCode)) && c.finishedAt) {
       const ended = Date.parse(c.finishedAt);
-      const since = c.stack ? upSince.get(`${c.project}\0${c.stack}`) : undefined;
+      const since = c.stack ? upSince.get(stackKey(c)) : undefined;
       if ((since !== undefined && ended > since) || now - ended < RECENT_CRASH_MS) {
-        problem = { ...base, kind: c.oomKilled ? "oom" : "exited", exitCode: c.exitCode };
+        out.set(c, { kind: c.oomKilled ? "oom" : "exited", exitCode: c.exitCode });
       }
     }
-    if (problem) {
-      if (!out.has(c.project)) out.set(c.project, []);
-      out.get(c.project)!.push(problem);
-    }
+  }
+  return out;
+}
+
+/** Containers that need a look (see problemKinds), per project. */
+export function containerProblems(containers: Container[], now = Date.now()): Map<string, ContainerProblem[]> {
+  const out = new Map<string, ContainerProblem[]>();
+  const kinds = problemKinds(containers, now);
+  for (const c of containers) {
+    const problem = kinds.get(c);
+    if (!c.project || !problem) continue;
+    if (!out.has(c.project)) out.set(c.project, []);
+    out.get(c.project)!.push({ stack: c.stack ?? c.name, service: c.service ?? c.name, ...problem });
   }
   return out;
 }
