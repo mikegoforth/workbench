@@ -7,8 +7,9 @@ import { userDataDir } from "./platform";
  * `npm run dev` and the desktop app, so both see the same hidden projects and
  * the same running dev servers. The desktop app sets WORKBENCH_DATA_DIR to
  * this same folder: Electron's userData folder plus data/, which is
- * ~/Library/Application Support/workbench/data on macOS and
- * ~/.config/workbench/data (or under $XDG_CONFIG_HOME) on Linux.
+ * ~/Library/Application Support/workbench/data on macOS,
+ * ~/.config/workbench/data (or under $XDG_CONFIG_HOME) on Linux and
+ * %APPDATA%\workbench\data on Windows.
  */
 const defaultDataDir = () => path.join(userDataDir("workbench"), "data");
 

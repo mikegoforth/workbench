@@ -12,6 +12,9 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     // Tests set WORKBENCH_* variables; put them back after each one.
     unstubEnvs: true,
+    // Starting a process is slow on Windows, and the git tests start dozens
+    // (real repos, commits, clones), so they can pass 5 s there.
+    testTimeout: process.platform === "win32" ? 30_000 : 5_000,
     coverage: {
       provider: "v8",
       // What coverage is measured against: every server-side module, tested or

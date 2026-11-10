@@ -39,7 +39,7 @@ function listKeys(keys: string[]): string {
 // The Node on workbench's PATH is the one Start will use. Looked up once.
 let installedNode: Promise<string | null> | null = null;
 function nodeOnPath(): Promise<string | null> {
-  installedNode ??= run("node", ["--version"], { timeout: 5_000 })
+  installedNode ??= run("node", ["--version"], { timeout: 5_000, windowsHide: true })
     .then(({ stdout }) => stdout.trim().replace(/^v/, ""))
     .catch(() => null);
   return installedNode;

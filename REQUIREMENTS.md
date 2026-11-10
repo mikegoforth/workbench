@@ -10,13 +10,13 @@ Setup's first step checks these and links to downloads for anything missing ([sr
 
 | Tool | Needed for | Minimum | Required |
 | --- | --- | --- | --- |
-| macOS or Linux | Running the app | macOS 13 (Ventura), Electron 45's minimum. Linux: x64 or arm64 desktop; checked on Ubuntu 24.04 and Debian 12 | Yes |
+| macOS, Windows or Linux | Running the app | macOS 13 (Ventura), Electron 45's minimum. Windows 10 or 11, x64 (ARM through emulation). Linux: x64 or arm64 desktop; checked on Ubuntu 24.04 and Debian 12 | Yes |
 | Node.js | Installing dependencies and running projects' dev servers. Also running workbench from source (`npm run dev`) | 22.12 (`MIN_NODE` in `requirements.ts`, `engines` in `package.json`). Node 20 is end-of-life | Yes |
-| Docker: Desktop or OrbStack on macOS; Engine or Docker Desktop on Linux | Projects with a compose file | Any | Yes |
+| Docker: Desktop or OrbStack on macOS; Engine or Docker Desktop on Linux; Docker Desktop on Windows | Projects with a compose file | Any | Yes |
 | Git | Reading every project's branch, changes and history | Any recent | Yes |
 | GitHub CLI (`gh`), signed in | CI status, pull requests, review requests | Any | Optional |
 | VS Code | Opening projects and files | Any | Optional |
-| A terminal app (Linux) | Open in Terminal: `$TERMINAL`, else the first of gnome-terminal, konsole, xfce4-terminal, kitty, alacritty, wezterm, foot, Ptyxis and others ([platform.ts](src/lib/platform.ts)) | Any | Optional |
+| A terminal app | Open in Terminal. Windows: Windows Terminal, else Command Prompt. Linux: `$TERMINAL`, else the first of gnome-terminal, konsole, xfce4-terminal, kitty, alacritty, wezterm, foot, Ptyxis and others ([platform.ts](src/lib/platform.ts)) | Any | Optional |
 
 The desktop app finds these on the `PATH` of the user's login shell (including nvm's default Node), read once at launch. A tool installed while the app is open is picked up on the next launch.
 
@@ -47,7 +47,7 @@ Not shipped. A vulnerability here affects the machine doing the build, not users
 
 - `npm audit --omit=dev`: **0 vulnerabilities**. `electron-updater` isn't covered by this (see above), but it doesn't appear in the full report either.
 - `npm audit`: 12 moderate, all in build and lint tooling (`electron-builder`, `typescript-eslint`) through one `minimatch` denial-of-service advisory. Nothing that ships. `npm audit fix` resolves them without breaking changes.
-- Code signing: none yet. Builds are ad-hoc signed, so macOS warns when a downloaded copy is first opened, and updates link to their download instead of installing themselves. A Developer ID certificate fixes both (see docs/development.md, "Signing"). Linux AppImages need no signing and install their own updates.
+- Code signing: none yet. Builds are ad-hoc signed, so macOS warns when a downloaded copy is first opened, and updates link to their download instead of installing themselves. A Developer ID certificate fixes both (see docs/development.md, "Signing"). Linux AppImages need no signing and install their own updates. The Windows installer is unsigned: SmartScreen warns on first install, and updates install themselves.
 - Update feed: set at build time from `WORKBENCH_RELEASES_OWNER` / `WORKBENCH_RELEASES_REPO` (the release workflow sets them to the repo it runs in, or the `RELEASES_OWNER` / `RELEASES_REPO` variables). Builds without them don't check for updates. Installed apps can only read releases from a public repo.
 
 ## Where fixes are announced
@@ -76,6 +76,6 @@ npm outdated electron electron-updater next react react-dom
 
 1. Update the package, keeping exact versions for Electron and its tooling, e.g. `npm install --save-exact electron@45.x.y`.
 2. Raise `version` in `package.json`. Installed apps only offer an update when the version is higher.
-3. `npm run desktop:dist`, then open `release/mac-arm64/workbench.app` (on Linux, `release/workbench-<version>-<arch>.AppImage`) and check it starts and lists projects.
-4. Publish the release (`npm run desktop:release`, or the release workflow). Installed apps check at launch and every 4 hours.
+3. `npm run desktop:dist`, then open `release/mac-arm64/workbench.app` (on Linux, `release/workbench-<version>-<arch>.AppImage`; on Windows, run `release/workbench-<version>-x64-setup.exe`) and check it starts and lists projects.
+4. Merge the release PR and push its tag; the release workflow builds and publishes every platform. Installed apps check at launch and every 4 hours.
 5. Update the versions in this file.

@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import type { DiscoveredRoot, DiscoveryResult } from "./types";
 import { tildify } from "./paths";
+import { platform } from "./platform";
 import { toWebUrl } from "./repoUrl";
 
 // Every path read here is somewhere in the home folder, chosen at runtime, so the
@@ -31,6 +32,24 @@ const SKIP_IN_HOME = new Set([
   "Library", "Applications", "Pictures", "Music", "Movies", "Public", "Desktop", "Downloads", path.join("go", "pkg"),
   "snap", "Videos", path.join("Android", "Sdk"),
 ]);
+
+/**
+ * Also skipped at the top of a Windows user folder (matched whatever the
+ * case): AppData (every program's data and caches, the Android SDK among
+ * them; often tens of GB), scoop (its buckets are git repos), and the shell
+ * folders that never hold projects. (The old "My Documents"-style junctions
+ * are links, which are never followed.) OneDrive is left in: people do keep
+ * code in it.
+ */
+const SKIP_IN_WINDOWS_HOME = new Set(
+  ["AppData", "scoop", "MicrosoftEdgeBackups", "Saved Games", "Searches", "Contacts", "Favorites", "Links", "3D Objects"].map((name) =>
+    name.toLowerCase()
+  )
+);
+
+function skippedInHome(rel: string): boolean {
+  return SKIP_IN_HOME.has(rel) || (platform() === "windows" && SKIP_IN_WINDOWS_HOME.has(rel.toLowerCase()));
+}
 
 /** Remote URLs from a git config file, origin first. */
 function remoteUrls(config: string): string[] {
@@ -133,7 +152,7 @@ export async function discoverProjectRoots(home = os.homedir()): Promise<Discove
             // Symlinks are skipped too (isDirectory() is false for them), which avoids loops.
             if (!e.isDirectory() || e.name.startsWith(".") || SKIP_NAMES.has(e.name)) continue;
             const child = path.join(dir, e.name);
-            if (SKIP_IN_HOME.has(path.relative(home, child))) continue;
+            if (skippedInHome(path.relative(home, child))) continue;
             next.push(child);
           }
         })

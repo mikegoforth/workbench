@@ -7,9 +7,10 @@ import path from "path";
  * Each function reads process.platform when it's called (never when this
  * module loads), so tests can switch platforms.
  *
- * macOS and Linux are supported. Windows gets the "not supported" answers it
- * always had (no Docker app to launch, no terminal, no VS Code fallback);
- * each switch below has a place for it.
+ * macOS, Linux and Windows are supported. On Windows nothing workbench runs
+ * goes through cmd.exe or PowerShell with text from a request or a repo:
+ * programs are found by full path (see which) and started directly, and the
+ * few fixed cmd.exe / PowerShell command lines are built here and in devenv.ts.
  *
  * Paths read here are fixed or chosen at runtime; the turbopackIgnore comments
  * keep the build from trying to bundle what they point at.
@@ -34,7 +35,60 @@ export function platform(): Platform {
 export interface Launch {
   command: string;
   args: string[];
+  /**
+   * Started and let go (spawn, detached, not waited for) rather than run to
+   * completion: a GUI app on Windows that keeps running, unlike `open -a`.
+   */
+  detached?: boolean;
+  /**
+   * Windows only: `args` is one fixed cmd.exe command line, passed as is
+   * (windowsVerbatimArguments). Never holds text from a request or a repo.
+   */
+  verbatim?: boolean;
 }
+
+// ---- Windows basics --------------------------------------------------------
+
+/** C:\Windows, from the environment, as Windows itself sets it. */
+function windowsDir(): string {
+  return process.env.SystemRoot || process.env.windir || "C:\\Windows";
+}
+
+/** The full path of a program in System32 (cmd.exe, taskkill.exe…), so it's never looked up on PATH or in a project folder. */
+export function system32(exe: string): string {
+  return path.win32.join(windowsDir(), "System32", exe);
+}
+
+/** Windows PowerShell, which every Windows 10/11 has. */
+export function powershellExe(): string {
+  return path.win32.join(windowsDir(), "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+}
+
+/** Program Files, from the environment. */
+function programFiles(): string {
+  return process.env.ProgramFiles || "C:\\Program Files";
+}
+
+/**
+ * Whether hardenExeSearch() set NoDefaultCurrentDirectoryInExePath itself
+ * (so devEnv() can leave it out of what projects get).
+ */
+let exeSearchHardened = false;
+export const exeSearchHardenedByUs = (): boolean => exeSearchHardened;
+
+/**
+ * Windows looks for a bare program name (git, docker) in the working folder
+ * before PATH, so `git status` run in a cloned repo could start a git.exe the
+ * repo contains. Setting NoDefaultCurrentDirectoryInExePath turns that off for
+ * every program this server starts (Node and cmd.exe both honour it). Done once,
+ * when this module loads; does nothing elsewhere.
+ */
+export function hardenExeSearch(): void {
+  if (platform() !== "windows" || process.env.NoDefaultCurrentDirectoryInExePath !== undefined) return;
+  process.env.NoDefaultCurrentDirectoryInExePath = "1";
+  exeSearchHardened = true;
+}
+hardenExeSearch();
 
 // ---- Data folder -----------------------------------------------------------
 
@@ -81,18 +135,29 @@ export function dockerApps(): { name: DockerApp["name"]; label: string; path: st
       ];
     case "linux":
       return [{ name: "Docker", label: "Docker Desktop", path: LINUX_DOCKER_DESKTOP }];
+    case "windows":
+      return [{ name: "Docker", label: "Docker Desktop", path: windowsDockerDesktop() }];
     default:
       return [];
   }
 }
 
+/** Where Docker Desktop for Windows installs itself. */
+export const windowsDockerDesktop = () => path.win32.join(programFiles(), "Docker", "Docker", "Docker Desktop.exe");
+
 /** The installed app that starts the Docker daemon, and how to launch it; null if there's none. */
 export function dockerApp(): DockerApp | null {
   const app = dockerApps().find((a) => fs.existsSync(a.path));
   if (!app) return null;
-  return platform() === "mac"
-    ? { name: app.name, command: "open", args: ["-a", app.name] }
-    : { name: app.name, command: "systemctl", args: ["--user", "start", "docker-desktop"] };
+  switch (platform()) {
+    case "mac":
+      return { name: app.name, command: "open", args: ["-a", app.name] };
+    case "windows":
+      // The app itself, left running: it starts the engine and stays in the tray.
+      return { name: app.name, command: app.path, args: [], detached: true };
+    default:
+      return { name: app.name, command: "systemctl", args: ["--user", "start", "docker-desktop"] };
+  }
 }
 
 /**
@@ -107,21 +172,52 @@ export function dockerManualStart(): string | null {
 
 // ---- VS Code ---------------------------------------------------------------
 
-/** Where VS Code lives when its `code` command isn't on PATH. */
+/** Where VS Code lives when its `code` command isn't on PATH (on Windows: always, see windowsVsCode). */
 export function vsCodePaths(): string[] {
   switch (platform()) {
     case "mac":
       return ["/Applications/Visual Studio Code.app"];
     case "linux":
       return ["/usr/share/code", "/usr/bin/code", "/snap/bin/code"];
+    case "windows":
+      return windowsVsCodeCandidates();
     default:
       return [];
   }
 }
 
+/**
+ * Where Code.exe may be on Windows, most likely first: next to the `code`
+ * command on PATH (bin\code.cmd is one folder below it), then the per-user
+ * and the system-wide install folders.
+ */
+function windowsVsCodeCandidates(): string[] {
+  const candidates: string[] = [];
+  const cli = which("code");
+  // which() builds this path with `path`, which is path.win32 on Windows.
+  if (cli) candidates.push(path.join(path.dirname(cli), "..", "Code.exe"));
+  if (process.env.LOCALAPPDATA) candidates.push(path.win32.join(process.env.LOCALAPPDATA, "Programs", "Microsoft VS Code", "Code.exe"));
+  candidates.push(path.win32.join(programFiles(), "Microsoft VS Code", "Code.exe"));
+  return candidates;
+}
+
+/**
+ * VS Code's Code.exe on Windows, or null. The `code` command there is
+ * code.cmd, a batch file: running it would put the project's path through
+ * cmd.exe, so workbench starts the app itself, which hands the folder to an
+ * open VS Code window the same way.
+ */
+export function windowsVsCode(): string | null {
+  return windowsVsCodeCandidates().find((p) => fs.existsSync(p)) ?? null;
+}
+
 const LINUX_CODE_CLIS = ["/usr/bin/code", "/snap/bin/code", "/usr/share/code/bin/code"];
 
-/** How to open VS Code when `code` isn't on PATH: the app on macOS, the CLI's usual places on Linux. */
+/**
+ * How to open VS Code when `code` isn't on PATH: the app on macOS, the CLI's
+ * usual places on Linux. On Windows this is how it's always opened: Code.exe,
+ * started and let go.
+ */
 export function vsCodeFallback(projectDir: string, file: string | null): Launch | null {
   switch (platform()) {
     case "mac":
@@ -130,6 +226,10 @@ export function vsCodeFallback(projectDir: string, file: string | null): Launch 
       const cli = LINUX_CODE_CLIS.find((p) => fs.existsSync(p));
       return cli ? { command: cli, args: file ? [projectDir, file] : [projectDir] } : null;
     }
+    case "windows": {
+      const exe = windowsVsCode();
+      return exe ? { command: exe, args: file ? [projectDir, file] : [projectDir], detached: true } : null;
+    }
     default:
       return null;
   }
@@ -137,26 +237,62 @@ export function vsCodeFallback(projectDir: string, file: string | null): Launch 
 
 // ---- Terminal --------------------------------------------------------------
 
-/** The full path of an executable: a bare name is looked up on PATH, an absolute path is checked as is. */
+/**
+ * The full path of an executable: a bare name is looked up on PATH, a path is
+ * checked as is (and must be absolute). Relative PATH entries are skipped, and
+ * so is the working folder, which Windows itself would search first.
+ *
+ * On Windows PATH is split on ";", entries may be quoted, and a name without
+ * one of the PATHEXT extensions (.com, .exe, .bat, .cmd…) is tried with each.
+ */
 export function which(cmd: string): string | null {
   if (!cmd) return null;
-  const candidates = cmd.includes("/")
+  const windows = platform() === "windows";
+  const hasSeparator = cmd.includes("/") || (windows && cmd.includes("\\"));
+  const bases = hasSeparator
     ? path.isAbsolute(cmd)
       ? [cmd]
       : []
     : (process.env.PATH ?? "")
-        .split(path.delimiter)
+        .split(windows ? ";" : path.delimiter)
+        .map((d) => (windows ? d.trim().replace(/^"(.*)"$/, "$1") : d))
         .filter((d) => path.isAbsolute(d))
         .map((d) => path.join(d, cmd));
+  const candidates = windows ? bases.flatMap(withPathExt) : bases;
   for (const candidate of candidates) {
-    try {
-      fs.accessSync(/*turbopackIgnore: true*/ candidate, fs.constants.X_OK);
-      if (fs.statSync(/*turbopackIgnore: true*/ candidate).isFile()) return candidate;
-    } catch {
-      // Not there, or not executable: try the next.
-    }
+    if (isExecutableFile(candidate, windows)) return candidate;
   }
   return null;
+}
+
+/** `name` as is when it already has a PATHEXT extension, then `name` plus each extension. */
+function withPathExt(name: string): string[] {
+  const exts = (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD")
+    .split(";")
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => /^\.[a-z0-9]+$/.test(e));
+  const ext = path.win32.extname(name).toLowerCase();
+  return [...(exts.includes(ext) ? [name] : []), ...exts.map((e) => name + e)];
+}
+
+function isExecutableFile(candidate: string, windows: boolean): boolean {
+  try {
+    fs.accessSync(/*turbopackIgnore: true*/ candidate, fs.constants.X_OK);
+  } catch {
+    return false; // Not there, or not executable.
+  }
+  try {
+    return fs.statSync(/*turbopackIgnore: true*/ candidate).isFile();
+  } catch {
+    // An app execution alias (wt.exe in WindowsApps) is a reparse point stat
+    // can't follow, but Windows starts it like any program.
+    if (!windows) return false;
+    try {
+      return fs.lstatSync(/*turbopackIgnore: true*/ candidate).isSymbolicLink();
+    } catch {
+      return false;
+    }
+  }
 }
 
 /**
@@ -194,6 +330,21 @@ export function linuxTerminal(dir: string): Launch | null {
     if (command) return { command, args: argsFor(command) };
   }
   return null;
+}
+
+/**
+ * The terminal to open on Windows, to be started (detached, visible) in the
+ * project folder: Windows Terminal when wt is on PATH, else a new Command
+ * Prompt window. The folder is only ever the working folder (`wt -d .` opens
+ * there; `start` passes it on to the new cmd.exe), never part of a command
+ * line, so cmd.exe never reads it, and a ";" in it means nothing to wt.
+ */
+export function windowsTerminal(): Launch {
+  const wt = which("wt");
+  if (wt) return { command: wt, args: ["-d", "."], detached: true };
+  // A detached cmd.exe has no console of its own; `start` opens one for a second cmd.exe.
+  const cmd = system32("cmd.exe");
+  return { command: cmd, args: ["/d", "/s", "/c", `"start "" "${cmd}""`], detached: true, verbatim: true };
 }
 
 // ---- Processes -------------------------------------------------------------

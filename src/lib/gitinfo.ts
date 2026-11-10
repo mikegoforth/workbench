@@ -17,6 +17,7 @@ async function git(dir: string, args: string[], timeout: number) {
       cwd: dir,
       timeout,
       maxBuffer: 10 * 1024 * 1024,
+      windowsHide: true,
       env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
     });
   } catch (e) {

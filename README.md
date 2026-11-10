@@ -4,7 +4,7 @@
 
 # workbench
 
-**A control panel for every coding project on your Mac or Linux machine.**
+**A control panel for every coding project on your computer: macOS, Windows or Linux.**
 
 See what needs attention across all your repos, start and stop dev environments,<br>
 and pick up where you left off, without opening GitHub, a terminal, or each repo by hand.
@@ -13,6 +13,7 @@ and pick up where you left off, without opening GitHub, a terminal, or each repo
 [![CI](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/mikegoforth/workbench/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikegoforth%2Fworkbench%2Fbadges%2Fcoverage.json)](docs/development.md#commands)
 [![macOS](https://img.shields.io/badge/--24292f?logo=apple&logoColor=white "macOS 13 or later")](#macos)
+[![Windows](https://img.shields.io/badge/--24292f?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTMgM2g4LjV2OC41SDN6TTEyLjUgM0gyMXY4LjVoLTguNXpNMyAxMi41aDguNVYyMUgzek0xMi41IDEyLjVIMjFWMjFoLTguNXoiLz48L3N2Zz4%3D "Windows 10 or 11 (x64)")](#windows)
 [![Linux](https://img.shields.io/badge/--24292f?logo=linux&logoColor=white "Linux (x64, arm64)")](#linux)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -58,6 +59,18 @@ workbench reads the real state of every project on your machine: git status, run
 
 When a new version comes out, workbench shows a banner with a link to download it.
 
+### Windows
+
+Available from version 0.1.2.
+
+1. Download `workbench-<version>-x64-setup.exe` from the [latest release](https://github.com/mikegoforth/workbench/releases/latest) and run it. It installs for your account only, with no administrator prompt, and adds workbench to the Start menu.
+2. Setup checks your tools and asks for your projects folder.
+
+> [!IMPORTANT]
+> The installer isn't signed yet, so Windows SmartScreen warns the first time you run it. Click **More info**, then **Run anyway**.
+
+workbench installs its own updates: when one is ready, it offers to restart. It runs on Windows on ARM through Windows' x64 emulation.
+
 ### Linux
 
 Available from version 0.1.2.
@@ -100,12 +113,12 @@ Each release also lists every file's SHA-256 in `SHA256SUMS`.
 
 ## Requirements
 
-A Mac running **macOS 13 (Ventura) or later**, or a 64-bit **Linux** desktop (Intel/AMD or ARM), with:
+A Mac running **macOS 13 (Ventura) or later**, a PC running **Windows 10 or 11**, or a 64-bit **Linux** desktop (Intel/AMD or ARM), with:
 
 | Tool | Used for | Needed |
 | --- | --- | --- |
 | [Node.js](https://nodejs.org/en/download) 22.12+ | Installing dependencies and running your projects' dev servers | Required |
-| Docker: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev) on macOS; [Docker Engine](https://docs.docker.com/engine/install/) or Docker Desktop on Linux | Projects with a compose file | Required |
+| Docker: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev) on macOS; [Docker Engine](https://docs.docker.com/engine/install/) or Docker Desktop on Linux; [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) on Windows | Projects with a compose file | Required |
 | [Git](https://git-scm.com/downloads) | Branches, changes and history for every project | Required |
 | [GitHub CLI](https://cli.github.com), signed in | CI status, pull requests and review requests | Optional |
 | [VS Code](https://code.visualstudio.com) | Opening projects and changed files | Optional |
@@ -122,7 +135,7 @@ npm run dev            # http://localhost:3000
 Or build the desktop app:
 
 ```bash
-npm run desktop:dist   # for the system you're on: .dmg and .zip (macOS) or AppImages (Linux) in release/
+npm run desktop:dist   # for the system you're on: .dmg (macOS), installer (Windows) or AppImages (Linux) in release/
 ```
 
 ## Documentation

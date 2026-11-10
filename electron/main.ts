@@ -162,7 +162,9 @@ async function startServer(): Promise<string> {
     stdio: "pipe",
     env: {
       ...process.env,
-      PATH,
+      // Windows apps already get the full PATH (spelled "Path" there); setting
+      // PATH as well would give the server two of them.
+      ...(process.platform === "win32" ? {} : { PATH }),
       PORT: String(port),
       // Loopback only: nothing else on the network can reach the API.
       HOSTNAME: "127.0.0.1",
@@ -274,10 +276,13 @@ function setStatus(next: UpdateStatus) {
  *   Ad-hoc signed builds still find updates, but link to the download.
  * - Linux: the AppImage replaces itself (APPIMAGE is its path); any other
  *   copy (an unpacked folder) links to the download.
+ * - Windows: the installed app updates itself.
  */
 function canInstallUpdates(): Promise<boolean> {
   if (!app.isPackaged) return Promise.resolve(false);
   if (process.platform === "linux") return Promise.resolve(!!process.env.APPIMAGE);
+  // Windows: the NSIS installer updates in place, signed or not.
+  if (process.platform === "win32") return Promise.resolve(true);
   if (process.platform !== "darwin") return Promise.resolve(false);
   const bundle = path.resolve(process.execPath, "..", "..", "..");
   return new Promise((resolve) => {
@@ -335,7 +340,12 @@ async function setupUpdates() {
   }
   const current = app.getVersion();
   const install = await canInstallUpdates();
-  const why = process.platform === "darwin" ? (install ? "signed with a Developer ID" : "not Developer ID signed") : install ? "running as an AppImage" : "not an AppImage";
+  const why =
+    process.platform === "darwin"
+      ? install ? "signed with a Developer ID" : "not Developer ID signed"
+      : process.platform === "win32"
+        ? "installed with the Windows installer"
+        : install ? "running as an AppImage" : "not an AppImage";
   log(`[update] ${why}: updates ${install ? "install themselves" : "link to their download"}`);
 
   autoUpdater.autoDownload = install;
@@ -384,7 +394,7 @@ ipcMain.handle("update:install", () => {
 
 function buildMenu() {
   const checkForUpdatesItem = { label: "Check for Updates…", click: () => checkForUpdates({ fromMenu: true }) };
-  // Linux (and later Windows): a window menu bar instead of the macOS app menu.
+  // Linux and Windows: a window menu bar instead of the macOS app menu.
   if (process.platform !== "darwin") {
     return Menu.buildFromTemplate([
       { label: "&File", submenu: [checkForUpdatesItem, { type: "separator" }, { role: "quit" }] },

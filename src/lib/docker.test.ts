@@ -10,12 +10,24 @@ import type { Container, StackDetail } from "./docker";
 // touching the real CLI.
 type Exec = (cmd: string, args: string[], opts: Record<string, unknown>) => Promise<{ stdout: string; stderr: string }>;
 const exec = vi.hoisted(() => vi.fn<Exec>());
+// spawn (Docker Desktop on Windows) hands back a fake child that reports "spawn", or `spawnError`.
+const spawner = await vi.hoisted(async () => {
+  const { EventEmitter } = await import("events");
+  const state = { error: null as Error | null, unref: vi.fn() };
+  const spawn = vi.fn<(cmd: string, args: string[], opts: object) => InstanceType<typeof EventEmitter>>(() => {
+    const child = Object.assign(new EventEmitter(), { unref: state.unref });
+    const error = state.error;
+    process.nextTick(() => (error ? child.emit("error", error) : child.emit("spawn")));
+    return child;
+  });
+  return { spawn, state };
+});
 vi.mock("child_process", async () => {
   const { promisify: p } = await import("util");
   const execFile = Object.assign(() => {
     throw new Error("execFile called without promisify");
   }, { [p.custom]: exec });
-  return { execFile, default: { execFile } };
+  return { execFile, spawn: spawner.spawn, default: { execFile, spawn: spawner.spawn } };
 });
 
 const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workbench-docker-")));
@@ -29,6 +41,8 @@ const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
 const realExists = fs.existsSync;
+/** Docker Desktop on Windows, with %ProgramFiles% pointed at a drive no machine has. */
+const WINDOWS_DOCKER = "Q:\\Programs\\Docker\\Docker\\Docker Desktop.exe";
 let apps: string[] = ["Docker"];
 
 const realPlatform = process.platform;
@@ -115,6 +129,7 @@ beforeEach(() => {
     if (p === "/Applications/Docker.app") return apps.includes("Docker");
     if (p === "/Applications/OrbStack.app") return apps.includes("OrbStack");
     if (p === "/opt/docker-desktop") return apps.includes("Docker Desktop for Linux");
+    if (p === WINDOWS_DOCKER) return apps.includes("Docker Desktop for Windows");
     return realExists(p);
   });
   setPlatform("darwin");
@@ -209,11 +224,46 @@ describe("startDaemon", () => {
     expect(exec).toHaveBeenCalledWith("open", ["-a", "OrbStack"], { timeout: 10_000 });
   });
 
-  it("has nothing to launch on Windows", async () => {
+});
+
+describe("Docker on Windows", () => {
+  beforeEach(() => {
     setPlatform("win32");
-    const { startDaemon } = await load(["Docker", "OrbStack", "Docker Desktop for Linux"]);
-    await expect(startDaemon()).rejects.toThrow("No Docker app found in /Applications");
+    vi.stubEnv("ProgramFiles", "Q:\\Programs");
+    spawner.spawn.mockClear();
+    spawner.state.unref.mockClear();
+    spawner.state.error = null;
+  });
+
+  it("starts Docker Desktop.exe and lets it run, without waiting for it", async () => {
+    const { startDaemon } = await load(["Docker Desktop for Windows"]);
+    await startDaemon();
+    expect(spawner.spawn).toHaveBeenCalledWith(WINDOWS_DOCKER, [], { detached: true, stdio: "ignore" });
+    expect(spawner.state.unref).toHaveBeenCalled();
     expect(exec).not.toHaveBeenCalled();
+  });
+
+  it("reports Docker Desktop failing to start", async () => {
+    spawner.state.error = new Error("spawn EACCES");
+    const { startDaemon } = await load(["Docker Desktop for Windows"]);
+    await expect(startDaemon()).rejects.toThrow("spawn EACCES");
+    expect(spawner.state.unref).not.toHaveBeenCalled();
+  });
+
+  it("says Docker Desktop isn't installed, ignoring the macOS and Linux apps", async () => {
+    const { startDaemon } = await load(["Docker", "OrbStack", "Docker Desktop for Linux"]);
+    await expect(startDaemon()).rejects.toThrow("Docker Desktop isn't installed");
+    expect(spawner.spawn).not.toHaveBeenCalled();
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it("reads Docker Desktop's named-pipe error as not running", async () => {
+    const { daemonFromError } = await load(["Docker Desktop for Windows"]);
+    const err = Object.assign(new Error("Command failed"), {
+      stderr:
+        'error during connect: Get "http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/v1.47/containers/json": open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.\r\n',
+    });
+    expect(daemonFromError(err)).toEqual({ state: "stopped", message: "Docker isn't running.", app: "Docker" });
   });
 });
 
@@ -524,7 +574,7 @@ describe("dockerSnapshot", () => {
     const inspected = exec.mock.calls.filter(([, args]) => args[0] === "inspect");
     expect(inspected.map(([, args]) => args[args.length - 1]).sort()).toEqual(["kill", "oom", "slow"]);
     expect(inspected[0][1]).toEqual(["inspect", "--format", "{{.State.OOMKilled}} {{.State.FinishedAt}}", expect.any(String)]);
-    expect(inspected[0][2]).toEqual({ timeout: 2_000 });
+    expect(inspected[0][2]).toEqual({ timeout: 2_000, windowsHide: true });
 
     const byId = new Map(snap.containers.map((c) => [c.id, c]));
     expect(byId.get("oom")).toMatchObject({ oomKilled: true, finishedAt: "2026-06-01T10:01:02.123456789Z" });
@@ -651,7 +701,7 @@ describe("composeConfig", () => {
     );
     const { composeConfig } = await load();
     const config = await composeConfig(dir, "compose.yaml");
-    expect(exec).toHaveBeenCalledWith("docker", ["compose", "config", "--format", "json"], { cwd: dir, timeout: 15_000 });
+    expect(exec).toHaveBeenCalledWith("docker", ["compose", "config", "--format", "json"], { cwd: dir, timeout: 15_000, windowsHide: true });
     expect(config).toEqual({
       mtimeMs: fs.statSync(path.join(dir, "compose.yaml")).mtimeMs,
       name: "shop",

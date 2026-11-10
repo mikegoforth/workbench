@@ -1,4 +1,4 @@
-import { execFile } from "child_process";
+import { execFile, spawn } from "child_process";
 import { promisify } from "util";
 import fs from "fs";
 import path from "path";
@@ -25,7 +25,9 @@ import type {
  *   project folder or two levels below it.
  *
  * Every command is execFile with fixed verbs; names, ids and paths travel as
- * separate arguments and never reach a shell.
+ * separate arguments and never reach a shell. docker is a real .exe on
+ * Windows, so the same calls work there; windowsHide keeps each one from
+ * flashing a console window when workbench runs without one.
  */
 
 const run = promisify(execFile);
@@ -97,7 +99,20 @@ export async function startDaemon(): Promise<void> {
   const app = dockerApp();
   if (!app) {
     const manual = dockerManualStart();
-    throw new Error(manual ? `Docker Desktop isn't installed. Start Docker in a terminal: ${manual}` : "No Docker app found in /Applications");
+    if (manual) throw new Error(`Docker Desktop isn't installed. Start Docker in a terminal: ${manual}`);
+    throw new Error(platform() === "windows" ? "Docker Desktop isn't installed" : "No Docker app found in /Applications");
+  }
+  if (app.detached) {
+    // Docker Desktop.exe on Windows keeps running: start it and let it go, like `open -a` does.
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(app.command, app.args, { detached: true, stdio: "ignore" });
+      child.once("error", reject);
+      child.once("spawn", () => {
+        child.unref();
+        resolve();
+      });
+    });
+    return;
   }
   await run(app.command, app.args, { timeout: 10_000 });
 }
@@ -220,7 +235,7 @@ function parsePs(line: string, now: number): Container | null {
 async function loadSnapshot(): Promise<Snapshot> {
   let stdout: string;
   try {
-    ({ stdout } = await run("docker", ["ps", "-a", "--no-trunc", "--format", PS_FORMAT], { timeout: 8_000, maxBuffer: 16 * 1024 * 1024 }));
+    ({ stdout } = await run("docker", ["ps", "-a", "--no-trunc", "--format", PS_FORMAT], { timeout: 8_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true }));
   } catch (e) {
     return { daemon: daemonFromError(e), containers: [] };
   }
@@ -237,7 +252,7 @@ async function loadSnapshot(): Promise<Snapshot> {
       .filter((c) => c.project && c.exitCode === 137 && c.finishedAt && now - Date.parse(c.finishedAt) < RECENT_CRASH_MS)
       .map(async (c) => {
         try {
-          const { stdout: out } = await run("docker", ["inspect", "--format", "{{.State.OOMKilled}} {{.State.FinishedAt}}", c.id], { timeout: 2_000 });
+          const { stdout: out } = await run("docker", ["inspect", "--format", "{{.State.OOMKilled}} {{.State.FinishedAt}}", c.id], { timeout: 2_000, windowsHide: true });
           const [oom, finished] = out.trim().split(" ");
           c.oomKilled = oom === "true";
           if (finished && finished !== NEVER) c.finishedAt = finished;
@@ -330,7 +345,7 @@ export async function composeConfig(dir: string, file: string): Promise<ComposeC
   let result: ComposeConfig;
   try {
     // No -f: resolve files (and overrides) exactly as `docker compose up` will.
-    const { stdout } = await run("docker", ["compose", "config", "--format", "json"], { cwd: dir, timeout: 15_000 });
+    const { stdout } = await run("docker", ["compose", "config", "--format", "json"], { cwd: dir, timeout: 15_000, windowsHide: true });
     const config = JSON.parse(stdout) as { name?: string; services?: Record<string, { build?: { context?: string } }> };
     const services = config.services ?? {};
     result = {
@@ -535,7 +550,7 @@ export async function projectLogs(project: string, since: string | null): Promis
       if (since && SINCE.test(since)) args.push("--since", since);
       args.push(c.id);
       try {
-        const { stdout, stderr } = await run("docker", args, { timeout: 10_000, maxBuffer: 32 * 1024 * 1024 });
+        const { stdout, stderr } = await run("docker", args, { timeout: 10_000, maxBuffer: 32 * 1024 * 1024, windowsHide: true });
         parseLog(stdout, c, "out", lines);
         parseLog(stderr, c, "err", lines);
       } catch (e) {

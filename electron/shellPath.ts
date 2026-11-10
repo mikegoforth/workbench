@@ -29,6 +29,8 @@ const FALLBACK = [
  * Startup files can print anything, so PATH is read from between markers.
  */
 export function loginShellPath(): Promise<string> {
+  // Windows: apps started from the Start menu get the user's full PATH already.
+  if (process.platform === "win32") return Promise.resolve(process.env.PATH ?? "");
   const shell = process.env.SHELL || (process.platform === "darwin" ? "/bin/zsh" : "/bin/bash");
   const script = `command -v nvm >/dev/null 2>&1 && nvm use default >/dev/null 2>&1; printf '${MARKER}%s${MARKER}' "$PATH"`;
   return new Promise((resolve) => {

@@ -12,7 +12,6 @@
 | `npm run test:coverage` | Tests plus a coverage report in `coverage/` (open `coverage/index.html`). Fails if coverage drops below the floor in `vitest.config.mts` |
 | `npm run desktop` | Build the desktop app's pieces and open it with Electron (no packaging) |
 | `npm run desktop:dist` | Package `workbench.app`, a `.dmg` and an update `.zip` into `release/` |
-| `npm run desktop:release` | Package and publish a GitHub release (normally done by CI) |
 
 `next dev` listens on every network interface. The API refuses requests that don't come from localhost, but to keep the whole app on this computer, run `npm run dev -- -H localhost`. `npm run dev` has no per-launch API token (see [SECURITY.md](../SECURITY.md)), so prefer the desktop app for everyday use.
 
@@ -21,7 +20,7 @@
 The desktop app is an Electron shell around the same Next.js app. At launch it:
 
 1. Reads `PATH` from your login shell, activating nvm's default Node if you use nvm. (Apps opened from Finder, the Dock or a Linux app launcher get a minimal `PATH`.)
-2. Copies its server to its data folder (`~/Library/Application Support/workbench/server/` on macOS, `~/.config/workbench/server/` on Linux) and checks every file against SHA-256s recorded at build time, so it never runs edited code and never writes inside the signed app.
+2. Copies its server to its data folder (`~/Library/Application Support/workbench/server/` on macOS, `~/.config/workbench/server/` on Linux, `%APPDATA%\workbench\server\` on Windows) and checks every file against SHA-256s recorded at build time, so it never runs edited code and never writes inside the signed app.
 3. Starts the Next.js server on a free port on `127.0.0.1` only, with a secret token for this launch.
 4. Opens a window on it. Links to GitHub and elsewhere open in your browser.
 

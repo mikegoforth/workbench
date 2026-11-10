@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // paths.ts reads settings from the data folder, which dataDir() caches per
 // module instance, so each test imports fresh copies pointed at temp folders.
@@ -17,10 +17,17 @@ async function load() {
   return import("./paths");
 }
 
+const realPlatform = process.platform;
+const setPlatform = (p: NodeJS.Platform) => Object.defineProperty(process, "platform", { value: p, configurable: true });
+
 beforeEach(() => {
   vi.stubEnv("WORKBENCH_DATA_DIR", dataDir);
   vi.stubEnv("WORKBENCH_PROJECTS_DIR", projects);
   fs.rmSync(dataDir, { recursive: true, force: true });
+});
+
+afterEach(() => {
+  setPlatform(realPlatform);
 });
 
 afterAll(() => {
@@ -39,9 +46,33 @@ describe("expandHome and tildify", () => {
   it("shortens paths in the home folder", async () => {
     const { tildify } = await load();
     expect(tildify(os.homedir())).toBe("~");
-    expect(tildify(path.join(os.homedir(), "code"))).toBe("~/code");
+    expect(tildify(path.join(os.homedir(), "code"))).toBe(path.join("~", "code"));
     // Same prefix, different folder: /Users/me-old is not under /Users/me.
     expect(tildify(os.homedir() + "-old")).toBe(os.homedir() + "-old");
+  });
+
+  it("matches the home folder case-sensitively off Windows", async () => {
+    setPlatform("linux");
+    const { tildify } = await load();
+    const upper = os.homedir().toUpperCase();
+    if (upper !== os.homedir()) expect(tildify(path.join(upper, "code"))).toBe(path.join(upper, "code"));
+  });
+
+  describe("on Windows", () => {
+    beforeEach(() => setPlatform("win32"));
+
+    it("expands ~\\x too", async () => {
+      const { expandHome } = await load();
+      expect(expandHome("~\\code")).toBe(path.join(os.homedir(), "code"));
+      expect(expandHome("~/code")).toBe(path.join(os.homedir(), "code"));
+      expect(expandHome("~other\\code")).toBe("~other\\code");
+    });
+
+    it("shortens the home folder whatever its case", async () => {
+      const { tildify } = await load();
+      expect(tildify(os.homedir().toUpperCase())).toBe("~");
+      expect(tildify(path.join(os.homedir().toLowerCase(), "code"))).toBe(path.join("~", "code"));
+    });
   });
 });
 
@@ -92,15 +123,12 @@ describe("validateProjectsDir", () => {
   it.each([
     ["darwin", "Use a full path, like ~/Projects or /Users/you/code"],
     ["linux", "Use a full path, like ~/Projects or /home/you/code"],
+    ["win32", "Use a full path, like ~\\Projects or C:\\Users\\you\\code"],
+    ["freebsd", "Use a full path, like ~/Projects or /Users/you/code"],
   ] as const)("gives a %s example of a full path", async (platform, message) => {
-    const real = process.platform;
-    Object.defineProperty(process, "platform", { value: platform, configurable: true });
-    try {
-      const { validateProjectsDir } = await load();
-      expect(validateProjectsDir("code")).toEqual({ error: message });
-    } finally {
-      Object.defineProperty(process, "platform", { value: real, configurable: true });
-    }
+    setPlatform(platform);
+    const { validateProjectsDir } = await load();
+    expect(validateProjectsDir("code")).toEqual({ error: message });
   });
 });
 
@@ -126,6 +154,36 @@ describe("resolveProjectDir", () => {
   ])("refuses %s", async (_label, name) => {
     const { resolveProjectDir } = await load();
     expect(resolveProjectDir(name)).toBeNull();
+  });
+
+  describe("on Windows", () => {
+    beforeEach(() => setPlatform("win32"));
+
+    it("resolves a project folder by name", async () => {
+      const { resolveProjectDir } = await load();
+      expect(resolveProjectDir("alpha")).toBe(path.join(projects, "alpha"));
+    });
+
+    it.each([
+      ["a parent path with a backslash", "..\\data"],
+      ["a nested path with a backslash", "alpha\\sub"],
+      ["a nested path with a slash", "alpha/sub"],
+      ["a drive-relative path", "C:alpha"],
+      ["a bare drive", "C:"],
+      ["an absolute path", "C:\\Windows"],
+      ["a UNC path", "\\\\server\\share"],
+      ["an alternate data stream", "alpha:stream"],
+      ["a trailing dot", "alpha."],
+      ["a trailing space", "alpha "],
+      ["a name that would mean the folder itself", " .."],
+      ["a device name", "NUL"],
+      ["a device name with an extension", "com1.txt"],
+      ["a reserved character", "a<b"],
+      ["a control character", "a\x01b"],
+    ])("refuses %s", async (_label, name) => {
+      const { resolveProjectDir } = await load();
+      expect(resolveProjectDir(name)).toBeNull();
+    });
   });
 });
 

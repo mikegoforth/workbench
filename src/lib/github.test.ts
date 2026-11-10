@@ -104,7 +104,13 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(root, { recursive: true, force: true });
+  // Git makes its object files read-only, which Windows can refuse to delete.
+  // A leftover temp folder there is harmless; anywhere else it's a bug.
+  try {
+    fs.rmSync(root, { recursive: true, force: true });
+  } catch (e) {
+    if (process.platform !== "win32") throw e;
+  }
 });
 
 describe("which repo it asks about", () => {
@@ -120,7 +126,7 @@ describe("which repo it asks about", () => {
     expect(args.slice(4)).toEqual(["-f", "owner=acme", "-f", "name=widgets", "-f", "ref=refs/heads/main"]);
     expect(args[2]).toBe("-f");
     expect(args[3]).toMatch(/^query=\s*query\(\$owner: String!, \$name: String!, \$ref: String!\)/);
-    expect(options).toEqual({ timeout: 20_000, maxBuffer: 5 * 1024 * 1024 });
+    expect(options).toEqual({ timeout: 20_000, maxBuffer: 5 * 1024 * 1024, windowsHide: true });
   });
 
   it("uses the checked-out branch name", async () => {

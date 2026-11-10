@@ -20,8 +20,7 @@
     "test:coverage": "vitest run --coverage",
     "desktop:build": "next build && node scripts/build-desktop.mjs",
     "desktop": "npm run desktop:build && electron .",
-    "desktop:dist": "npm run desktop:build && electron-builder --config electron-builder.config.mjs --publish never",
-    "desktop:release": "npm run desktop:build && electron-builder --config electron-builder.config.mjs --mac --linux --publish always"
+    "desktop:dist": "npm run desktop:build && electron-builder --config electron-builder.config.mjs --publish never"
   },
   "dependencies": {
     "lucide-react": "1.70.0",

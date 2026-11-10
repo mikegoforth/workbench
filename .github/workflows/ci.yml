@@ -47,11 +47,18 @@ jobs:
       - run: npm run desktop:build
       - run: npm audit --audit-level=high
 
-  # The tests again on macOS, so platform code (ps, /Applications, Terminal)
-  # runs for real on both systems the app ships for. Checks covers Linux.
-  tests-macos:
-    name: Tests (macOS)
-    runs-on: macos-latest
+  # The tests again on macOS and Windows, so platform code (ps, /Applications,
+  # Terminal, taskkill, .cmd shims) runs for real on every system the app ships
+  # for. Checks covers Linux.
+  tests:
+    name: Tests (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macOS, os: macos-latest }
+          - { name: Windows, os: windows-latest }
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,6 +74,47 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
 
       - run: npm test
+
+  # Packages the app for each system (unpacked, no installer) and launches it:
+  # the bundled server must start and the window load (scripts/smoke-desktop.mjs).
+  desktop:
+    name: Desktop app (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macOS, os: macos-latest }
+          - { name: Linux, os: ubuntu-latest }
+          - { name: Windows, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+
+      - run: npm run desktop:build
+      # The real installers for this system (dmg and zip, AppImage, or the NSIS
+      # installer), which also leaves the unpacked app that the smoke test runs.
+      - run: npx electron-builder --config electron-builder.config.mjs --publish never
+      - run: node scripts/smoke-desktop.mjs
+
+      # Windows: install for this user, silently, and run the installed copy too.
+      - name: Install and run the installed app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem release -Filter '*-setup.exe' | Select-Object -First 1
+          Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait
+          node scripts/smoke-desktop.mjs "$env:LOCALAPPDATA\Programs\workbench\workbench.exe"
 
   # After a push to main, publishes main's coverage for the README badge: a
   # shields.io endpoint file, force-pushed as the only commit on the `badges`
