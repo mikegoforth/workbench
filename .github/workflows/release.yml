@@ -1,8 +1,11 @@
 # Builds the macOS app and publishes it as a GitHub release when a version tag is pushed:
 #   npm version patch && git push --follow-tags
 #
-# Each release gets SHA256SUMS, and (in a public repo) a signed build-provenance
-# attestation per file, which anyone can check:
+# The release is built as a draft, gets SHA256SUMS and (in a public repo) a
+# signed build-provenance attestation per file, and is published last. So a
+# failure leaves an unpublished draft, and the order works with immutable
+# releases (Settings → General → Releases), which lock a release's files and
+# tag once it's published. Anyone can check a download:
 #   gh attestation verify workbench-<version>-arm64.dmg --repo <owner>/<repo>
 #
 # Optional secrets, set on the "release" environment (without them the app is
@@ -65,7 +68,9 @@ jobs:
       - name: Refuse to ship known high or critical vulnerabilities
         run: npm audit --audit-level=high
 
-      - name: Build and publish
+      # electron-builder creates a draft release (releaseType in
+      # electron-builder.config.mjs) and uploads the apps and the update feed to it.
+      - name: Build and upload to a draft release
         run: npm run desktop:release
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.GITHUB_TOKEN }}
@@ -77,7 +82,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Publish SHA256SUMS
+      - name: Attach SHA256SUMS to the draft
         working-directory: release
         run: |
           shasum -a 256 *.dmg *.zip > SHA256SUMS
@@ -95,3 +100,10 @@ jobs:
           subject-path: |
             release/*.dmg
             release/*.zip
+
+      # Last, so nothing above can change a published release. With immutable
+      # releases on, this locks the release's files and tag.
+      - name: Publish the release
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --repo "$RELEASES_OWNER/$RELEASES_REPO"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.GITHUB_TOKEN }}

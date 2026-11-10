@@ -86,7 +86,9 @@ const config = {
   // (see docs/development.md, "Updates and releases"). null: no feed, and updates are off.
   publish:
     releasesOwner && releasesRepo
-      ? { provider: "github", owner: releasesOwner, repo: releasesRepo, releaseType: "release" }
+      ? // A draft: the release workflow attaches checksums and provenance, then
+        // publishes it. (The app's update check doesn't read this setting.)
+        { provider: "github", owner: releasesOwner, repo: releasesRepo, releaseType: "draft" }
       : null,
 };
 
