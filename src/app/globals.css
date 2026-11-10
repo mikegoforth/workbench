@@ -119,6 +119,17 @@
   --font-mono: var(--font-roboto-mono), ui-monospace, "SF Mono", monospace;
 }
 
+/* Dialogs settle in from just below: short, eased out, and skipped under reduced motion (motion-safe:). */
+@theme {
+  --animate-dialog-in: dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.985);
+    }
+  }
+}
+
 /* ---- Browser surfaces ---- */
 
 /* In the base layer so utilities (focus:outline-none, ring-*) can override them. */

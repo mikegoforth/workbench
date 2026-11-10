@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { Tone } from "@/lib/status";
 import { Count } from "./ui";
+import WhatsNew from "./WhatsNew";
 import { VIEW_TITLE, type Counts, type View } from "./model";
 
 interface NavItem {
@@ -124,8 +125,9 @@ export default function SideNav({
           </div>
         ))}
       </div>
-      {onToggleCollapsed && (
-        <div className="border-t border-line p-2">
+      <div className="space-y-0.5 border-t border-line p-2">
+        <WhatsNew collapsed={collapsed} />
+        {onToggleCollapsed && (
           <button
             type="button"
             onClick={onToggleCollapsed}
@@ -136,8 +138,8 @@ export default function SideNav({
             {collapsed ? <ChevronsRight aria-hidden size={18} /> : <ChevronsLeft aria-hidden size={18} />}
             {!collapsed && "Collapse"}
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </nav>
   );
 }
