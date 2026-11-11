@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="workbench">
-  <rect width="64" height="64" rx="14" fill="#1a73e8"/>
-  <g transform="translate(12 12) scale(2.5)" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round">
-    <path d="M2 5.25h12M3.75 5.25v7.5M12.25 5.25v7.5M3.75 9.5h8.5"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Workbench">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#16243b"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>
+  <rect width="512" height="512" rx="114" fill="url(#g)"/>
+  <rect x="108" y="108" width="136" height="136" rx="32" fill="#1a73e8"/><rect x="268" y="108" width="136" height="136" rx="32" fill="#fff" fill-opacity=".92"/><rect x="108" y="268" width="136" height="136" rx="32" fill="#fff" fill-opacity=".92"/><rect x="268" y="268" width="136" height="136" rx="32" fill="#fff" fill-opacity=".18"/><circle cx="336" cy="336" r="30" fill="#3ddc97"/>
 </svg>

@@ -83,6 +83,10 @@ const config = {
   },
   mac: {
     category: "public.app-category.developer-tools",
+    // App icons live in electron/resources (buildResources). icon.icns holds
+    // every macOS size with Apple's standard margins; Linux sizes are generated
+    // from it. The source artwork is docs/assets/logo.svg.
+    icon: "icon.icns",
     // Apple Silicon and Intel. The zip is what auto-update downloads; the dmg is for first installs.
     target: [
       { target: "dmg", arch: ["arm64", "x64"] },
@@ -115,6 +119,8 @@ const config = {
   // certificate in CSC_LINK / WIN_CSC_LINK signs it.
   win: {
     target: [{ target: "nsis", arch: ["x64"] }],
+    // Full-bleed artwork, 16 to 256 px.
+    icon: "icon.ico",
   },
   nsis: {
     // Per-user install: no admin prompt, and updates never need one either.

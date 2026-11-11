@@ -280,7 +280,7 @@ describe("VS Code requirement", () => {
 
   it("explains a missing VS Code", async () => {
     outputs["code --version"] = null;
-    expect(await requirement("vscode")).toMatchObject({ ok: false, found: null, detail: "Not found. workbench opens projects and files in it." });
+    expect(await requirement("vscode")).toMatchObject({ ok: false, found: null, detail: "Not found. Workbench opens projects and files in it." });
   });
 });
 
@@ -372,7 +372,7 @@ describe("on Windows", () => {
 
   it("explains a missing VS Code, ignoring macOS and Linux locations", async () => {
     existing.add(VSCODE_APP).add("/usr/bin/code");
-    expect(await requirement("vscode")).toMatchObject({ ok: false, detail: "Not found. workbench opens projects and files in it." });
+    expect(await requirement("vscode")).toMatchObject({ ok: false, detail: "Not found. Workbench opens projects and files in it." });
   });
 
   it("links to Docker Desktop for Windows", async () => {
@@ -391,7 +391,7 @@ describe("on Windows", () => {
     expect(await requirement("docker")).toMatchObject({
       ok: false,
       detail: "Docker Desktop is installed, but the docker command isn't available.",
-      hint: expect.stringContaining("restart workbench"),
+      hint: expect.stringContaining("restart Workbench"),
     });
   });
 

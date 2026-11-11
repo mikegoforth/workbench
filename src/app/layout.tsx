@@ -31,7 +31,7 @@ const crt = VT323({
 });
 
 export const metadata: Metadata = {
-  title: "workbench",
+  title: "Workbench",
   description: "Every repo in your projects folder: status, dev servers, git and notes",
 };
 

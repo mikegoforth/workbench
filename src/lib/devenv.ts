@@ -445,7 +445,7 @@ async function launch(name: string, dir: string, slot: Slot, extra: Pick<RunStat
   let args: string[];
   if (platform() === "windows") {
     const node = which("node");
-    if (!node) throw new DevError(500, "Node.js isn't on PATH; workbench runs things with it on Windows");
+    if (!node) throw new DevError(500, "Node.js isn't on PATH; Workbench runs things with it on Windows");
     command = node;
     args = ["-e", WINDOWS_LAUNCHER, JSON.stringify({ steps: what.steps.map(windowsStep), exitLine: what.exitLine })];
   } else {
@@ -713,7 +713,7 @@ export function runScript(name: string, dir: string, script: string): Promise<vo
     if (platform() === "windows" && !WINDOWS_SCRIPT_NAME.test(script)) {
       throw new DevError(
         400,
-        `"${script}" can't be run from workbench on Windows: there a script's name goes through cmd.exe, so it may only use letters, digits and : . _ @ / + -. Run it in a terminal instead.`
+        `"${script}" can't be run from Workbench on Windows: there a script's name goes through cmd.exe, so it may only use letters, digits and : . _ @ / + -. Run it in a terminal instead.`
       );
     }
     await ensureIdle(name, "script", (s) => `"${s.script}" is still running`);

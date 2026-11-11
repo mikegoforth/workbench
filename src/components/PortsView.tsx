@@ -55,7 +55,7 @@ function stopPlan(owner: PortOwner, projects: Set<string>): StopPlan | null {
         url: "/api/scripts",
         body: { projectName: owner.project, action: "stop" },
         label: "Stop",
-        title: `Stop the script${owner.script ? ` "${owner.script}"` : ""} workbench is running for ${owner.project}`,
+        title: `Stop the script${owner.script ? ` "${owner.script}"` : ""} Workbench is running for ${owner.project}`,
       };
     }
     return {
@@ -79,11 +79,11 @@ function stopPlan(owner: PortOwner, projects: Set<string>): StopPlan | null {
 function OwnerIcon({ owner }: { owner: PortOwner }) {
   const [Icon, label, tint]: [LucideIcon, string, string] =
     owner.kind === "run"
-      ? [Server, "Started by workbench", "text-ok"]
+      ? [Server, "Started by Workbench", "text-ok"]
       : owner.kind === "container"
         ? [Container, "Docker container", "text-brand-text"]
         : owner.kind === "self"
-          ? [EthernetPort, "workbench", "text-brand-text"]
+          ? [EthernetPort, "Workbench", "text-brand-text"]
           : [Cpu, "Process", "text-fg-3"];
   return (
     <span title={label} className={`mt-0.5 shrink-0 ${tint}`}>
@@ -112,17 +112,17 @@ function Owner({ row, ctx, projects }: { row: ListeningPort; ctx: Ctx; projects:
   let sub: string | null;
   if (o.kind === "run") {
     main = <ProjectLink name={o.project} ctx={ctx} known={projects.has(o.project)} />;
-    sub = o.task === "script" ? `Script${o.script ? ` "${o.script}"` : ""}, started by workbench` : o.task === "install" ? "Dependency install, started by workbench" : "Dev server, started by workbench";
+    sub = o.task === "script" ? `Script${o.script ? ` "${o.script}"` : ""}, started by Workbench` : o.task === "install" ? "Dependency install, started by Workbench" : "Dev server, started by Workbench";
   } else if (o.kind === "container") {
     const where = [o.stack, o.service].filter(Boolean).join(" / ");
     main = o.project ? <ProjectLink name={o.project} ctx={ctx} known={projects.has(o.project)} /> : <span className="font-medium text-fg">{o.container}</span>;
     sub = o.project ? `Container ${where || o.container}` : `Container · ${o.image}`;
   } else if (o.kind === "self") {
-    main = <span className="font-medium text-fg">workbench</span>;
+    main = <span className="font-medium text-fg">Workbench</span>;
     sub = "This app's own server";
   } else if (o.project) {
     main = <ProjectLink name={o.project} ctx={ctx} known={projects.has(o.project)} />;
-    sub = "Started in its folder, outside workbench";
+    sub = "Started in its folder, outside Workbench";
   } else {
     main = <span className="font-medium wrap-break-word text-fg">{row.process ?? "Unknown process"}</span>;
     sub = row.pid ? null : "Its process can't be seen without admin rights";
@@ -314,7 +314,7 @@ export default function PortsView({ ctx }: { ctx: Ctx }) {
       />
       <PageBody>
         <p className="mb-4 text-[13.5px] text-fg-2">
-          Every TCP port listening on this computer and what holds it. Stop is offered only for what workbench runs: a project&apos;s dev environment,
+          Every TCP port listening on this computer and what holds it. Stop is offered only for what Workbench runs: a project&apos;s dev environment,
           script or compose stack.
         </p>
         <Card>

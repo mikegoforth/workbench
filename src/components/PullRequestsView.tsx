@@ -159,7 +159,7 @@ function PullRequestTable({
                       <button
                         type="button"
                         onClick={() => onOpenProject(project)}
-                        title={`Open ${project} in workbench`}
+                        title={`Open ${project} in Workbench`}
                         className="inline-flex items-center gap-1 font-medium text-brand-text hover:underline"
                       >
                         <FolderGit2 aria-hidden size={13} strokeWidth={2.25} />

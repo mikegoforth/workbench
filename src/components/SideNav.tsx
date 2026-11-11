@@ -98,7 +98,7 @@ export default function SideNav({
 
   return (
     <nav
-      aria-label="workbench"
+      aria-label="Workbench"
       className={`flex shrink-0 flex-col border-r border-line bg-sidebar transition-[width] duration-150 ${collapsed ? "w-15" : "w-64"} ${className}`}
     >
       <div className="min-h-0 flex-1 overflow-y-auto py-3">

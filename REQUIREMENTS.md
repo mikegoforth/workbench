@@ -1,8 +1,8 @@
 # Requirements and dependencies
 
-Everything workbench depends on, at what version, and where security fixes for each are announced. Update this file whenever one of these versions changes.
+Everything Workbench depends on, at what version, and where security fixes for each are announced. Update this file whenever one of these versions changes.
 
-Last reviewed: 2026-11-10, for workbench 0.1.4.
+Last reviewed: 2026-11-10, for Workbench 0.1.4.
 
 ## On the user's computer
 
@@ -11,7 +11,7 @@ Setup's first step checks these and links to downloads for anything missing ([sr
 | Tool | Needed for | Minimum | Required |
 | --- | --- | --- | --- |
 | macOS, Windows or Linux | Running the app | macOS 13 (Ventura), Electron 45's minimum. Windows 10 or 11, x64 (ARM through emulation). Linux: x64 or arm64 desktop; checked on Ubuntu 24.04 and Debian 12 | Yes |
-| Node.js | Installing dependencies and running projects' dev servers. Also running workbench from source (`npm run dev`) | 22.12 (`MIN_NODE` in `requirements.ts`, `engines` in `package.json`). Node 20 is end-of-life | Yes |
+| Node.js | Installing dependencies and running projects' dev servers. Also running Workbench from source (`npm run dev`) | 22.12 (`MIN_NODE` in `requirements.ts`, `engines` in `package.json`). Node 20 is end-of-life | Yes |
 | Docker: Desktop or OrbStack on macOS; Engine or Docker Desktop on Linux; Docker Desktop on Windows | Projects with a compose file | Any | Yes |
 | Git | Reading every project's branch, changes and history | Any recent | Yes |
 | GitHub CLI (`gh`), signed in | CI status, pull requests, review requests | Any | Optional |

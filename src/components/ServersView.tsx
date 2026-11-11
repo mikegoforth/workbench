@@ -162,7 +162,7 @@ export default function ServersView({ ctx, items }: { ctx: Ctx; items: Item[] })
       />
       <PageBody>
         <p className="mb-4 text-[13.5px] text-fg-2">
-          Dev servers, scripts and containers running for any project in {ctx.projectsDir}, including hidden ones and stacks started outside workbench.
+          Dev servers, scripts and containers running for any project in {ctx.projectsDir}, including hidden ones and stacks started outside Workbench.
         </p>
         <Card>
           <div className="relative overflow-x-auto">
