@@ -1320,7 +1320,7 @@ describe("on Windows", () => {
     fs.rmSync(node);
     const err = await devError(start("alpha", dir));
     expect(err.status).toBe(500);
-    expect(err.message).toBe("Node.js isn't on PATH; workbench runs things with it on Windows");
+    expect(err.message).toBe("Node.js isn't on PATH; Workbench runs things with it on Windows");
     expect(mocks.spawn).not.toHaveBeenCalled();
   });
 
@@ -1359,7 +1359,7 @@ describe("on Windows", () => {
       const err = await devError(runScript("alpha", dir, script));
       expect(err.status).toBe(400);
       expect(err.message).toBe(
-        `"${script}" can't be run from workbench on Windows: there a script's name goes through cmd.exe, so it may only use letters, digits and : . _ @ / + -. Run it in a terminal instead.`
+        `"${script}" can't be run from Workbench on Windows: there a script's name goes through cmd.exe, so it may only use letters, digits and : . _ @ / + -. Run it in a terminal instead.`
       );
       expect(mocks.spawn).not.toHaveBeenCalled();
     }

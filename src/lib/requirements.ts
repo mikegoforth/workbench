@@ -16,8 +16,9 @@ const run = promisify(execFile);
 
 /**
  * Oldest Node that runs current Next.js and Vite dev servers and is still
- * supported (Node 20 reached end-of-life in April 2026). Keep in step with the
- * README, REQUIREMENTS.md and `engines` in package.json.
+ * supported (Node 20 reached end-of-life in April 2026). Keep in step with
+ * docs/install.md, docs/development.md, REQUIREMENTS.md and `engines` in
+ * package.json.
  */
 export const MIN_NODE = "22.12.0";
 
@@ -103,7 +104,7 @@ async function checkDocker(): Promise<Requirement> {
       hint: linux
         ? "Install the docker-ce-cli package from Docker's repository, or reinstall Docker Desktop."
         : os === "windows"
-          ? "Open Docker Desktop once so it can finish setting up, then restart workbench so it sees the new PATH."
+          ? "Open Docker Desktop once so it can finish setting up, then restart Workbench so it sees the new PATH."
           : `Open ${app.label} once so it can finish installing its command-line tools.`,
     };
   }
@@ -117,7 +118,7 @@ const GIT_DOWNLOAD: Partial<Record<ReturnType<typeof platform>, string>> = {
 
 const GIT_HINT: Partial<Record<ReturnType<typeof platform>, string>> = {
   linux: "Install it with your distribution's package manager, e.g. sudo apt install git or sudo dnf install git",
-  windows: "Or install it with winget: winget install --id Git.Git -e. Then restart workbench so it sees the new PATH.",
+  windows: "Or install it with winget: winget install --id Git.Git -e. Then restart Workbench so it sees the new PATH.",
 };
 
 async function checkGit(): Promise<Requirement> {
@@ -137,7 +138,7 @@ async function checkGit(): Promise<Requirement> {
     ...base,
     ok: false,
     found: null,
-    detail: "Not found. workbench reads every project's branch, changes and history with it.",
+    detail: "Not found. Workbench reads every project's branch, changes and history with it.",
     hint: GIT_HINT[os] ?? "Or install Apple's command-line tools: xcode-select --install",
   };
 }
@@ -181,7 +182,7 @@ async function checkVsCode(): Promise<Requirement> {
   if (vsCodePaths().some((p) => fs.existsSync(p))) {
     return { ...base, ok: true, found: null, detail: "Installed" };
   }
-  return { ...base, ok: false, found: null, detail: "Not found. workbench opens projects and files in it." };
+  return { ...base, ok: false, found: null, detail: "Not found. Workbench opens projects and files in it." };
 }
 
 export async function checkRequirements(): Promise<RequirementsResult> {

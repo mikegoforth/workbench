@@ -119,7 +119,7 @@ export default function Preferences({ projectsDir }: { projectsDir: string }) {
         icon={TimerReset}
         description={
           <>
-            How often <span className="font-mono">{projectsDir}</span> is scanned again while workbench is open. Manual only: when you press{" "}
+            How often <span className="font-mono">{projectsDir}</span> is scanned again while Workbench is open. Manual only: when you press{" "}
             <RefreshCw aria-label="Rescan" size={12} className="inline align-[-1px]" /> in the top bar.
           </>
         }

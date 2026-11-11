@@ -77,7 +77,7 @@ function runtimeServerDir(): string {
     copy();
     changed = changedFiles(dir, manifest);
     if (changed.length > 0) {
-      throw new Error(`workbench's own files don't match this build (${changed[0]}). Reinstall workbench from a release download.`);
+      throw new Error(`workbench's own files don't match this build (${changed[0]}). Reinstall Workbench from a release download.`);
     }
   }
   for (const rel of walk(dir)) {
@@ -158,7 +158,7 @@ async function startServer(): Promise<string> {
 
   server = utilityProcess.fork(serverJs, [], {
     cwd: serverDir,
-    serviceName: "workbench server",
+    serviceName: "Workbench server",
     stdio: "pipe",
     env: {
       ...process.env,
@@ -181,7 +181,7 @@ async function startServer(): Promise<string> {
     server = null;
     log(`server exited with code ${code}`);
     if (!quitting) {
-      dialog.showErrorBox("workbench stopped", `Its server exited unexpectedly (code ${code}).\n\nDetails are in ${logFile()}.`);
+      dialog.showErrorBox("Workbench stopped", `Its server exited unexpectedly (code ${code}).\n\nDetails are in ${logFile()}.`);
       app.quit();
     }
   });
@@ -233,7 +233,7 @@ function createWindow() {
     height: 920,
     minWidth: 820,
     minHeight: 560,
-    title: "workbench",
+    title: "Workbench",
     show: false,
     // The page's --bg, so the window doesn't flash white before it paints.
     backgroundColor: nativeTheme.shouldUseDarkColors ? "#1b1b1d" : "#f7f7f8",
@@ -324,7 +324,7 @@ async function checkForUpdates({ fromMenu = false } = {}) {
   try {
     const result = await autoUpdater.checkForUpdates();
     if (fromMenu && !result?.isUpdateAvailable) {
-      dialog.showMessageBox({ message: "workbench is up to date", detail: `You have version ${app.getVersion()}.` });
+      dialog.showMessageBox({ message: "Workbench is up to date", detail: `You have version ${app.getVersion()}.` });
     }
   } catch (error) {
     log(`[update] check failed: ${(error as Error).stack ?? error}`);
@@ -442,7 +442,7 @@ if (!app.requestSingleInstanceLock()) {
       origin = await startServer();
     } catch (error) {
       log(`startup failed: ${(error as Error).stack ?? error}`);
-      dialog.showErrorBox("workbench couldn't start", `${(error as Error).message}\n\nDetails are in ${logFile()}.`);
+      dialog.showErrorBox("Workbench couldn't start", `${(error as Error).message}\n\nDetails are in ${logFile()}.`);
       stopServer();
       app.quit();
       return;

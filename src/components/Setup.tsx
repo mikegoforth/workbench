@@ -61,7 +61,7 @@ export default function Setup({
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:py-12">
       <div className="mb-6 flex items-center gap-3">
         <Logo />
-        <h1 className="text-[22px] leading-tight text-fg">{alreadySetUp ? "workbench setup" : "Set up workbench"}</h1>
+        <h1 className="text-[22px] leading-tight text-fg">{alreadySetUp ? "Workbench setup" : "Set up Workbench"}</h1>
         {alreadySetUp && (
           <TextButton onClick={onClose} className="ml-auto">
             Close
@@ -101,8 +101,8 @@ export default function Setup({
         <>
           <p className="mb-3 text-[13.5px] text-fg-2">
             {missing.length === 0
-              ? "Everything workbench needs is installed."
-              : `${missing.length === 1 ? "One thing" : `${missing.length} things`} workbench needs ${missing.length === 1 ? "is" : "are"} missing. Install ${missing.length === 1 ? "it" : "them"}, then check again.`}
+              ? "Everything Workbench needs is installed."
+              : `${missing.length === 1 ? "One thing" : `${missing.length} things`} Workbench needs ${missing.length === 1 ? "is" : "are"} missing. Install ${missing.length === 1 ? "it" : "them"}, then check again.`}
           </p>
           <Card>
             <RequirementList requirements={requirements.requirements} />
@@ -120,7 +120,7 @@ export default function Setup({
           </div>
           {!requirements.ok && (
             <p className="mt-3 text-[12.5px] text-fg-3">
-              Just installed something? Check again. If it still isn&apos;t found, quit and reopen workbench so it picks up the new PATH.
+              Just installed something? Check again. If it still isn&apos;t found, quit and reopen Workbench so it picks up the new PATH.
             </p>
           )}
         </>

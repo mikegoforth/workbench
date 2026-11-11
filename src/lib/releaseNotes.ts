@@ -21,6 +21,19 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.1.5",
+    changes: [
+      {
+        kind: "changed",
+        text: "The app now calls itself Workbench, with a capital W, in its window title, setup, dialogs and messages.",
+      },
+      {
+        kind: "changed",
+        text: "A new icon: a dashboard of project tiles with a green status light, in the Dock or taskbar, the top bar and the browser tab.",
+      },
+    ],
+  },
+  {
     version: "0.1.4",
     date: "2026-11-10",
     changes: [
@@ -42,7 +55,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: "new",
-        text: "Ports: every TCP port listening on your computer and what's using it (a project's dev server or script, a Docker container, or another app), flagging any open beyond localhost. Open web ports in the browser, and stop what workbench runs right from the list.",
+        text: "Ports: every TCP port listening on your computer and what's using it (a project's dev server or script, a Docker container, or another app), flagging any open beyond localhost. Open web ports in the browser, and stop what Workbench runs right from the list.",
       },
       {
         kind: "new",
@@ -80,7 +93,7 @@ export const RELEASES: Release[] = [
     changes: [
       {
         kind: "security",
-        text: "Hardened how workbench names the files that track your running dev servers and scripts, so they always stay inside its own data folder.",
+        text: "Hardened how Workbench names the files that track your running dev servers and scripts, so they always stay inside its own data folder.",
       },
     ],
   },
@@ -90,7 +103,7 @@ export const RELEASES: Release[] = [
     changes: [
       {
         kind: "new",
-        text: "workbench runs on Windows and Linux. On Windows, run the installer; on Linux, make the AppImage executable and open it. Both install their own updates.",
+        text: "Workbench runs on Windows and Linux. On Windows, run the installer; on Linux, make the AppImage executable and open it. Both install their own updates.",
       },
       {
         kind: "new",
@@ -98,7 +111,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: "security",
-        text: "Projects opened in VS Code no longer inherit workbench's private settings, including the key that protects its connection to its own window.",
+        text: "Projects opened in VS Code no longer inherit Workbench's private settings, including the key that protects its connection to its own window.",
       },
     ],
   },

@@ -4,7 +4,7 @@ Thanks for helping. Small, focused changes are the quickest to review.
 
 ## Bugs and feature requests
 
-Open an issue: <https://github.com/mikegoforth/workbench/issues>. For a bug, include your system (macOS, Windows or Linux), the workbench version (in the sidebar footer) and the steps that show it.
+Open an issue: <https://github.com/mikegoforth/workbench/issues>. For a bug, include your system (macOS, Windows or Linux), the Workbench version (in the sidebar footer) and the steps that show it.
 
 **Security problems:** don't open an issue. Report them privately as described in [SECURITY.md](SECURITY.md).
 
@@ -27,4 +27,4 @@ Open an issue: <https://github.com/mikegoforth/workbench/issues>. For a bug, inc
 
 ## License
 
-By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE), like the rest of workbench.
+By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE), like the rest of Workbench.

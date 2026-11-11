@@ -1,5 +1,16 @@
 # Development
 
+## Run from source
+
+You need [Node.js](https://nodejs.org/en/download) 22.12 or later, plus the tools in [What you need](install.md#what-you-need).
+
+```bash
+npm install
+npm run dev            # http://localhost:3000
+```
+
+To build the desktop app for the system you're on, run `npm run desktop:dist`: a `.dmg` on macOS, an installer on Windows, or AppImages on Linux, in `release/`.
+
 ## Commands
 
 | Command | What it does |
@@ -32,7 +43,7 @@ Dev servers it starts keep running when you quit or update the app.
 
 **Releasing.** Open a release PR that raises the version (`npm version patch --no-git-tag-version`) and sets that version's date in `releaseNotes.ts`; a test fails if the current version has no dated notes. After it merges, tag `main` and push the tag: `git tag v<version> && git push origin v<version>`. The [release workflow](../.github/workflows/release.yml) builds Apple Silicon and Intel versions into a draft release, attaches `SHA256SUMS` and a build-provenance attestation (also as the file `workbench-<version>.intoto.jsonl`, which OpenSSF Scorecard's Signed-Releases check looks for), then publishes it. If any step fails, the release stays an unpublished draft. This order works with **immutable releases** (Settings → General → Releases), which lock a release's files and tag once it's published. The workflow's header lists the optional secrets.
 
-**Update feed.** A build only checks for updates when `WORKBENCH_RELEASES_OWNER` and `WORKBENCH_RELEASES_REPO` are set at build time. The release workflow sets them to the repo it runs in, or to the `RELEASES_OWNER` / `RELEASES_REPO` variables. Local builds and forks without them never check for updates, so they can't pick up someone else's releases. When there is a feed, the app checks at launch, every 4 hours, and from **workbench → Check for Updates…**.
+**Update feed.** A build only checks for updates when `WORKBENCH_RELEASES_OWNER` and `WORKBENCH_RELEASES_REPO` are set at build time. The release workflow sets them to the repo it runs in, or to the `RELEASES_OWNER` / `RELEASES_REPO` variables. Local builds and forks without them never check for updates, so they can't pick up someone else's releases. When there is a feed, the app checks at launch, every 4 hours, and from **Workbench → Check for Updates…**.
 
 **Public releases, private source.** Installed apps read releases without a token, so releases must be in a public repo. To keep the source private, publish to a separate public repo that holds only releases: set the two variables, and add a `RELEASES_TOKEN` secret (a fine-grained token that can write only to that repo).
 

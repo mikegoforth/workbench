@@ -574,7 +574,7 @@ export default function Dashboard() {
             {dirInfo && !dirInfo.exists ? (
               <>
                 <span className="font-mono">{dirInfo.display}</span> doesn&apos;t exist. Choose the folder that holds your projects, or let
-                workbench find it.
+                Workbench find it.
               </>
             ) : (
               <>

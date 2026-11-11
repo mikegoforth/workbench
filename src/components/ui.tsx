@@ -798,13 +798,20 @@ export function Menu({
   );
 }
 
-/** The workbench mark: a bench, top and legs, on a blue tile. */
+/**
+ * The Workbench mark: a dashboard of project tiles, one with a green status
+ * light, on a navy tile. Same artwork as docs/assets/logo.svg and the app
+ * icons, with a flat background (the gradient doesn't show at this size).
+ */
 export function Logo() {
   return (
-    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-brand text-on-brand">
-      <svg aria-hidden viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-        <path d="M2 5.25h12M3.75 5.25v7.5M12.25 5.25v7.5M3.75 9.5h8.5" />
-      </svg>
-    </span>
+    <svg aria-hidden viewBox="0 0 512 512" width="28" height="28" className="size-7 shrink-0">
+      <rect width="512" height="512" rx="114" fill="#111b2e" />
+      <rect x="108" y="108" width="136" height="136" rx="32" fill="#1a73e8" />
+      <rect x="268" y="108" width="136" height="136" rx="32" fill="#fff" fillOpacity=".92" />
+      <rect x="108" y="268" width="136" height="136" rx="32" fill="#fff" fillOpacity=".92" />
+      <rect x="268" y="268" width="136" height="136" rx="32" fill="#fff" fillOpacity=".18" />
+      <circle cx="336" cy="336" r="30" fill="#3ddc97" />
+    </svg>
   );
 }

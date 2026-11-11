@@ -6,7 +6,7 @@ import type { DiscoveredRoot, DiscoveryResult, ProjectsDirInfo } from "@/lib/typ
 import { Badge, Button, EmptyState, Panel } from "./ui";
 
 const SOURCE_LABEL: Record<ProjectsDirInfo["source"], string> = {
-  settings: "Saved in workbench",
+  settings: "Saved in Workbench",
   env: "From WORKBENCH_PROJECTS_DIR",
   default: "Default",
 };

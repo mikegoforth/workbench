@@ -72,7 +72,7 @@ export default function WhatsNew({ collapsed }: { collapsed: boolean }) {
     trigger.current?.focus();
   };
 
-  const label = `What's new in workbench ${APP_VERSION}${unseen ? " (unread)" : ""}`;
+  const label = `What's new in Workbench ${APP_VERSION}${unseen ? " (unread)" : ""}`;
 
   return (
     <>
@@ -151,7 +151,7 @@ function ReleaseNotesDialog({ onClose }: { onClose: () => void }) {
               What&apos;s new
             </h2>
             <p id="whats-new-version" className="mt-0.5 text-[13px] text-fg-3">
-              You&apos;re on workbench <span className="tabular-nums">{APP_VERSION}</span>
+              You&apos;re on Workbench <span className="tabular-nums">{APP_VERSION}</span>
             </p>
           </div>
           <button

@@ -41,7 +41,7 @@ export default function UpdateBanner() {
     <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-brand-line bg-brand-soft px-5 py-3 text-[13.5px] sm:px-5">
       <Sparkles aria-hidden size={18} strokeWidth={2} className="shrink-0 text-brand-text" />
       <p className="min-w-0 flex-1 text-fg">
-        <span className="font-medium">workbench {status.version} is {status.state === "ready" ? "ready to install" : "available"}.</span>{" "}
+        <span className="font-medium">Workbench {status.version} is {status.state === "ready" ? "ready to install" : "available"}.</span>{" "}
         <span className="text-fg-2">
           {status.state === "ready"
             ? "Restarting takes a few seconds. Running dev servers keep running."
