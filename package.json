@@ -40,7 +40,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "5.1.0",
-    "electron": "45.2.3",
+    "electron": "45.3.2",
     "electron-builder": "26.18.0",
     "electron-updater": "6.8.11",
     "esbuild": "0.28.2",
